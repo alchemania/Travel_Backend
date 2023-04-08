@@ -165,3 +165,6 @@ CORS_ALLOW_HEADERS = (
 )
 
 APPEND_SLASH = False
+
+LANGUAGE_CODE = 'zh-Hans'
+TIME_ZONE = 'Asia/Shanghai'

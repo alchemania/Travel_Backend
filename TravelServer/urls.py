@@ -20,7 +20,7 @@ from django.views.generic import TemplateView
 import api.views
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path("admin", admin.site.urls),
     path("api/data/nmainland/all", api.views.api_nmainland_all),
     path('api/data/nmainland/sum/<int:year>', api.views.api_nmainland_sum_year),
     path('api/data/nmainland/per/<int:year>', api.views.api_nmainland_per_year),
