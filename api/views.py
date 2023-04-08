@@ -1,3 +1,4 @@
+import datetime
 import json
 import math
 
@@ -7,6 +8,7 @@ from django.http import HttpResponse, JsonResponse
 from django.core import serializers
 from api.models import NonMainlandTravelData, HotelData, ForeignTravelData
 from django.db.models import Avg, Sum
+from django.db.models import F
 
 
 # Create your views here.
@@ -24,6 +26,35 @@ def api_nmainland_all(request):
         res['hk_mw'].append(i.HM)
         res['tw'].append(i.TW)
     return JsonResponse(res)
+
+
+def api_nmainland_sum_year(request, year):
+    try:
+        today = datetime.datetime.today()
+        if year == today.year:
+            year_sum = NonMainlandTravelData.objects.filter(DATE__lte=today, DATE__year=year).aggregate(Sum('SUM'))
+        else:
+            year_sum = NonMainlandTravelData.objects.filter(DATE__year=year).aggregate(Sum('SUM'))
+        return JsonResponse({'sum': 0 if year_sum['SUM__sum'] is None else year_sum['SUM__sum']})
+    except Exception:
+        return JsonResponse({'sum': 0})
+
+
+def api_nmainland_per_year(request, year):
+    n_sum = NonMainlandTravelData.objects.filter(DATE__year=year).aggregate(Sum('SUM'))['SUM__sum']
+    l_sum = NonMainlandTravelData.objects.filter(DATE__year=(year - 1)).aggregate(Sum('SUM'))['SUM__sum']
+    return JsonResponse({'per': round(100 * (n_sum - l_sum) / l_sum, 2)})
+
+
+def api_nmainland_sum_month(request, year, month):
+    month_sum = NonMainlandTravelData.objects.filter(DATE__lte=f'{year}-{month}-1').last().SUM
+    return JsonResponse({'sum': month_sum})
+
+
+def api_nmainland_per_month(request, year, month):
+    n_sum = NonMainlandTravelData.objects.filter(DATE__lte=f'{year}-{month}-1').last().SUM
+    l_sum = NonMainlandTravelData.objects.filter(DATE__lte=f'{year - 1}-{month}-1').last().SUM
+    return JsonResponse({'per': round((n_sum - l_sum) / l_sum, 2)})
 
 
 def api_hotel_all(request):
@@ -44,13 +75,19 @@ def api_hotel_all(request):
     return JsonResponse(res)
 
 
+def api_hotel_rate(request):
+    today = datetime.datetime.today()
+    rate = HotelData.objects.filter(DATE__year=today.year, DATE__month=today.month).first().avg_rent_rate
+    return JsonResponse({'per': rate})
+
+
 def api_weather(request):
     city_code = '310000'
     key = '66ca50b578c7a66cc0fd79dcb48f096a'
     url = f'https://restapi.amap.com/v3/weather/weatherInfo?city={city_code}&key={key}'
     wdata = requests.get(url=url).json()
     tmp = wdata["lives"][0]
-    return JsonResponse({'data': tmp})
+    return JsonResponse({'data': 'this api has been aborted.'})
 
 
 def api_country_rate(request):

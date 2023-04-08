@@ -37,10 +37,8 @@ class HotelData(models.Model):
     DATE = models.DateField(primary_key=True, db_column='日期')
     avg_rent_rate = models.FloatField(db_column='星级平均出租率')
     avg_price = models.IntegerField(db_column='星级平均房价')
-    avg_price_inc = models.FloatField(db_column='星级平均房价增长')
     avg_rent_rate_5 = models.FloatField(db_column='五星级平均出租率')
     avg_price_5 = models.IntegerField(db_column='五星级平均房价')
-    avg_price_inc_5 = models.FloatField(db_column='五星级平均房价增长')
 
     class Meta:
         db_table = 'data_hotel'

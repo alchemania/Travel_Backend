@@ -57,7 +57,7 @@ ROOT_URLCONF = "TravelServer.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'templates']
+        "DIRS": [BASE_DIR / 'templates/dist']
         ,
         "APP_DIRS": True,
         "OPTIONS": {
@@ -72,7 +72,7 @@ TEMPLATES = [
 ]
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'templates/static'),
+    os.path.join(BASE_DIR, 'templates/dist/static'),
 ]
 
 WSGI_APPLICATION = "TravelServer.wsgi.application"
@@ -134,7 +134,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # 跨域增加忽略
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_ALLOW_ALL = True
-CORS_ORIGIN_WHITELIST = ()
+CORS_ORIGIN_WHITELIST = (
+    'http://localhost:8080',
+    'http://localhost:8081',
+    'http://localhost:8000',
+    'http://localhost:8088',
+)
 
 # 对应的发送的请求的跨域
 CORS_ALLOW_METHODS = (
@@ -158,3 +163,5 @@ CORS_ALLOW_HEADERS = (
     'x-csrftoken',
     'x-requested-with',
 )
+
+APPEND_SLASH = False
