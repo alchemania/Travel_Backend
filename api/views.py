@@ -1,14 +1,10 @@
 import datetime
-import json
-import math
 
 import requests
-from django.forms import model_to_dict
-from django.http import HttpResponse, JsonResponse
-from django.core import serializers
+from django.db.models import Sum
+from django.http import JsonResponse
+
 from api.models import NonMainlandTravelData, HotelData, ForeignTravelData
-from django.db.models import Avg, Sum
-from django.db.models import F
 
 
 # 查出nmainland表中所有数据

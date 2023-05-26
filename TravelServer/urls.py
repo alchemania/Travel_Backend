@@ -18,6 +18,7 @@ from django.urls import path, re_path
 from django.views.generic import TemplateView
 
 import api.views
+import ml.views
 
 urlpatterns = [
     path("admin", admin.site.urls),
@@ -30,5 +31,9 @@ urlpatterns = [
     path("api/data/hotel/per", api.views.api_hotel_rate),
     path("api/data/weather", api.views.api_weather),
     path("api/data/country/rate", api.views.api_country_rate),
+
+    path("ml/retrain", ml.views.ml_re_train),
+    path("ml/repred", ml.views.ml_re_pred),
+
     path('', TemplateView.as_view(template_name='index.html'))
 ]

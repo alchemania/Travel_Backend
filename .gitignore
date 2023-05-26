@@ -1,2 +1,4 @@
-templates/*
 .idea
+/templates/dist/
+/ml/migrations/
+/api/migrations/

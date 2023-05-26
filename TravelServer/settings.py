@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "api",
+    "ml",
     "corsheaders"
 ]
 
@@ -87,7 +88,7 @@ DATABASES = {
         'USER': 'DJANGO',
         'PASSWORD': 'Alphabet22136',
         'HOST': 'localhost',
-        'PORT': '5236',
+        'PORT': '5237',
         'OPTIONS': {'local_code': 1, 'connection_timeout': 5}
     }
 }

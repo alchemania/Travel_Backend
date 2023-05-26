@@ -2,13 +2,13 @@
 
 ## 1. 概述
 
-​	该项目为django+vue3数据大屏，此django后端为前端大屏提供数据支撑，包括但不限于使用api调用规定的数据，调用预测的数据，查询处理的数据
+​ 该项目为django+vue3数据大屏，此django后端为前端大屏提供数据支撑，包括但不限于使用api调用规定的数据，调用预测的数据，查询处理的数据
 
 ## 2.api介绍
 
-​	本项目所有的api均可在TravelServer文件夹下的url中看到。
+​ 本项目所有的api均可在TravelServer文件夹下的url中看到。
 
-​	以下为所有api：
+​ 以下为所有api：
 
 ```
 path("admin/", admin.site.urls),
@@ -34,8 +34,6 @@ path('', TemplateView.as_view(template_name='index.html'))
 
 ![image-20230408175318719](C:\Users\LIUYAN\AppData\Roaming\Typora\typora-user-images\image-20230408175318719.png)
 
-
-
 ### path('', TemplateView.as_view(template_name='index.html'))
 
 该链接不是api，链接到前端编译好的html入口上，实现前后端一体化，实现django同时启动前后端。
@@ -57,3 +55,11 @@ path('', TemplateView.as_view(template_name='index.html'))
 所有sum返回{ ‘sum’ ：num}，num一般为原值，特殊情况返回原值/10000
 
 **ps：api里的<…>为通配符，格式为<数据类型：变量名称>**
+
+celery启动命令win,linux不需要
+celery worker -A tasks --loglevel=info -P eventlet
+celery -A tasks worker --loglevel=info -P eventlet
+
+
+redis
+./redis-server.exe redis.windows.conf
