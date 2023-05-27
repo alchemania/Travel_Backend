@@ -2,6 +2,7 @@ import uuid
 
 from django.db import models
 
+
 # Create your models here.
 
 
@@ -14,17 +15,19 @@ class Ml(models.Model):
     dataSource = models.CharField(max_length=100)  # table name
     dataLearnedBegin = models.DateField()  # bg
     dataLearnedEnd = models.DateField()  # ed
-    forecastSpan = models.IntegerField()  # 12个月
-    forecastUnit = models.CharField(max_length=20)
+    # 放入超参数一起管理
+    # forecastSpan = models.IntegerField()  # 12个月
+    # forecastUnit = models.CharField(max_length=20)
     lastForecast = models.DateTimeField()  # 上次运行时间
     loss = models.FloatField()  # loss
     precision = models.FloatField()  # 准确度
     # training - info 训练中
-    # preding - info 预测中
-    # latest - success dataLearnedEnd与当前日期相差一个月以内
-    # useful - warning dataLearnedEnd与当前日期相差3个月以内
-    # outdated - error dataLearnedEnd与当前日期相差3个月以上
+    # latest - success dataLearnedEnd与当前日期相差3个月以内
+    # useful - warning dataLearnedEnd与当前日期相差6个月以内
+    # outdated - error dataLearnedEnd与当前日期相差6个月以上
     modelStatus = models.CharField(max_length=20)
+    # 达梦不支持jsonField 所以直接使用jsonstring存储超参数
+    hyperParameters = models.CharField(max_length=4999, null=True)
 
     class Meta:
         db_table = "ml_mlInfo"

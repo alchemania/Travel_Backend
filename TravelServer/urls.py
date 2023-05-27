@@ -34,6 +34,8 @@ urlpatterns = [
 
     path("ml/retrain", ml.views.ml_re_train),
     path("ml/repred", ml.views.ml_re_pred),
+    path("ml/paras", ml.views.ml_adjust_paras),
+    path("ml/all", ml.views.ml_get_all),
 
     path('', TemplateView.as_view(template_name='index.html'))
 ]
