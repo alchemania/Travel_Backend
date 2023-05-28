@@ -32,8 +32,9 @@ urlpatterns = [
     path("api/data/weather", api.views.api_weather),
     path("api/data/country/rate", api.views.api_country_rate),
 
-    path("ml/retrain", ml.views.ml_re_train),
-    path("ml/repred", ml.views.ml_re_pred),
+    path("ml/train/re", ml.views.ml_re_train),
+    path("ml/pred/re", ml.views.ml_re_pred),
+    path("ml/pred/is", ml.views.ml_forecast_insight),
     path("ml/paras", ml.views.ml_adjust_paras),
     path("ml/all", ml.views.ml_get_all),
 

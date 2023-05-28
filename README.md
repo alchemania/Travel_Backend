@@ -60,6 +60,18 @@ celery启动命令win,linux不需要
 celery worker -A tasks --loglevel=info -P eventlet
 celery -A tasks worker --loglevel=info -P eventlet
 
-
 redis
 ./redis-server.exe redis.windows.conf
+
+## 必须的包
+django==3.1.7
+dmPython
+django_dmPython
+eventlet ==latest
+celery == latest
+pandas
+redis
+django-pandas
+django-cors-headers
+numpy(捆绑安装)
+scikit_learn
