@@ -3,6 +3,7 @@ import json
 import os
 import django
 import keras
+import pandas as pd
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TravelServer.settings')
 django.setup()
@@ -27,8 +28,6 @@ app = Celery('my_task', broker=broker, backend=backend)
 @app.task
 def re_train(mid: int):
     specModel = Ml.objects.get(id=mid)
-    specModel.modelStatus = "training"
-    specModel.save()
     paras = json.loads(specModel.hyperParameters)
     # 超参数 begin
     DATA_SCALE = paras['DATA_SCALE']
@@ -81,7 +80,8 @@ def re_train(mid: int):
     # save status
     specModel.loss = flag[0]
     specModel.precision = flag[1]
-    specModel.lastForecast = datetime.time()
+    specModel.lastUpdate = datetime.datetime.now()
+    specModel.modelStatus = "latest"
     specModel.save()
 
 
@@ -92,7 +92,7 @@ def re_train(mid: int):
 
 
 @app.task
-def re_pred(mid: int):
+def predict(mid: int, isinsight: bool):
     specModel = Ml.objects.get(id=mid)
     src = specModel.dataSource
     paras = json.loads(specModel.hyperParameters)
@@ -118,22 +118,27 @@ def re_pred(mid: int):
             step = np.append(step, tmp, axis=0)
             step = np.delete(step, 0, 0)
             out.append(scr.inverse_transform(tmp).reshape(DATA_SCALE))
-        out = np.array(out)
-        val = np.sum(out, axis=1).reshape(PRED_LENGTH, -1)  # 合计项
+        out = np.array(out).astype(int)
+        val = np.sum(out, axis=1).reshape(PRED_LENGTH, -1).astype(int)  # 合计项
         # 生成时间轴
         START_TIME = specModel.dataLearnedEnd
         timeline = [(START_TIME + relativedelta(months=i + 1)) for i in range(PRED_LENGTH)]
-        res = np.concatenate([val, out], axis=1).astype(int)
         # 删除大于dataEnd的数据，是预测值，没有意义
-        NonMainlandTravelData.objects.filter(DATE__gt=specModel.dataLearnedEnd).delete()
-        pred = [NonMainlandTravelData(
-            DATE=timeline[index],
-            SUM=x[0],
-            FOREIGN=x[1],
-            HM=x[2],
-            TW=x[3]
-        ) for index, x in enumerate(res)]
-        NonMainlandTravelData.objects.bulk_create(pred)
+        if isinsight:
+            res = np.concatenate([np.array(timeline).reshape(PRED_LENGTH, -1), val, out], axis=1)
+            df = pd.DataFrame(res, columns=["DATE", "SUM", "FOREIGN", "HM", "TW"])
+            return df.to_dict(orient='records')
+        else:
+            res = np.concatenate([val, out], axis=1)
+            NonMainlandTravelData.objects.filter(DATE__gt=specModel.dataLearnedEnd).delete()
+            pred = [NonMainlandTravelData(
+                DATE=timeline[index],
+                SUM=x[0],
+                FOREIGN=x[1],
+                HM=x[2],
+                TW=x[3]
+            ) for index, x in enumerate(res)]
+            NonMainlandTravelData.objects.bulk_create(pred)
     elif specModel.dataSource == HotelData._meta.db_table:
         datas = HotelData.objects.filter(DATE__gte=specModel.dataLearnedBegin,
                                          DATE__lte=specModel.dataLearnedEnd)
@@ -150,19 +155,22 @@ def re_pred(mid: int):
             step = np.append(step, tmp, axis=0)
             step = np.delete(step, 0, 0)
             out.append(scr.inverse_transform(tmp).reshape(DATA_SCALE))
-        out = np.array(out)
-        val = np.sum(out, axis=1).reshape(PRED_LENGTH, -1)  # 合计项
+        out = np.array(out).astype(int)
         # 生成时间轴
         START_TIME = specModel.dataLearnedEnd
         timeline = [(START_TIME + relativedelta(months=i + 1)) for i in range(PRED_LENGTH)]
-        res = np.concatenate([val, out], axis=1).astype(int)
+        if isinsight:
+            res = np.concatenate([np.array(timeline).reshape(PRED_LENGTH, -1), out], axis=1)
+            df = pd.DataFrame(res, columns=["DATE", "avg_rent_rate", "avg_price", "avg_rent_rate_5", "avg_price_5"])
+            return df.to_dict(orient='records')
         # 删除大于dataEnd的数据，是预测值，没有意义
-        HotelData.objects.filter(DATE__gt=specModel.dataLearnedEnd).delete()
-        pred = [HotelData(
-            DATE=timeline[index],
-            avg_rent_rate=x[0],
-            avg_price=x[1],
-            avg_rent_rate_5=x[2],
-            avg_price_5=x[3]
-        ) for index, x in enumerate(res)]
-        HotelData.objects.bulk_create(pred)
+        else:
+            HotelData.objects.filter(DATE__gt=specModel.dataLearnedEnd).delete()
+            pred = [HotelData(
+                DATE=timeline[index],
+                avg_rent_rate=x[0],
+                avg_price=x[1],
+                avg_rent_rate_5=x[2],
+                avg_price_5=x[3]
+            ) for index, x in enumerate(out)]
+            HotelData.objects.bulk_create(pred)
