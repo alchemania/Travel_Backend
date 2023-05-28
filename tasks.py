@@ -36,6 +36,8 @@ def re_train(mid: int):
     PRED_LENGTH = paras['PRED_LENGTH']
     LEARNING_RATE = paras['LEARNING_RATE']
     LSTM_LAYER = paras['LSTM_LAYER']
+    EPOCHS = paras['EPOCHS']
+    BATCH_SIZE = paras['BATCH_SIZE']
     # 超参数 end
     if specModel.dataSource == NonMainlandTravelData._meta.db_table:
         data = NonMainlandTravelData.objects.filter(DATE__gte=specModel.dataLearnedBegin,
@@ -72,7 +74,7 @@ def re_train(mid: int):
                     metrics=['accuracy']
                     )
     # 训练网络
-    network.fit(train_x, train_y, epochs=100, batch_size=1)
+    network.fit(train_x, train_y, epochs=EPOCHS, batch_size=BATCH_SIZE)
     # save and evaluate
     network.save(f'./models/{specModel.id}.h5')
     flag = network.evaluate(train_x, train_y, verbose=0)
