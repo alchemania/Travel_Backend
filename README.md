@@ -1,16 +1,17 @@
+
 # Travel Backend README
 
-## 1. 概述
+## 1. Overview
 
-​ 该项目为django+vue3数据大屏，此django后端为前端大屏提供数据支撑，包括但不限于使用api调用规定的数据，调用预测的数据，查询处理的数据
+This project is a django+vue3 data dashboard. This Django backend provides data support for the frontend dashboard, including but not limited to using API calls to specified data, calling predicted data, and querying processed data.
 
-## 2.api介绍
+## 2. API Introduction
 
-​ 本项目所有的api均可在TravelServer文件夹下的url中看到。
+All APIs of this project can be seen in the URLs in the TravelServer folder.
 
-​ 以下为所有api：
+Below are all the APIs:
 
-```
+```Python
 path("admin/", admin.site.urls),
 path("api/data/nmainland/all", api.views.api_nmainland_all),
 path('api/data/nmainland/sum/<int:year>', api.views.api_nmainland_sum_year),
@@ -24,46 +25,32 @@ path("api/data/country/rate", api.views.api_country_rate),
 path('', TemplateView.as_view(template_name='index.html'))
 ```
 
-### path("admin/", admin.site.urls),
+### Other Data Type APIs
 
-此api打开管理员界面，该站点功能强大，可以直接管理数据库和账户，修改的所有数据可以直接在前端反应出来，并且可以直接修改数据库，对数据库进行增删改查（这不就是老师要的后台管理界面嘛，省得写代码了，多好，还带有权限控制，是不是很棒）
+All subsequent APIs follow one principle: API/(return value type, data, img, video, etc.)/ database table/operation / additional conditions/additional conditions...
 
-![image-20230408175328237](C:\Users\LIUYAN\AppData\Roaming\Typora\typora-user-images\image-20230408175328237.png)
+For example, this API indicates that it seeks to return data type data, needs to query the mainland table, and returns all data.
 
-![image-20230408175258143](C:\Users\LIUYAN\AppData\Roaming\Typora\typora-user-images\image-20230408175258143.png)
+The operators include all, per, sum, etc., which respectively mean query all, query year-over-year growth, and query total.
 
-![image-20230408175318719](C:\Users\LIUYAN\AppData\Roaming\Typora\typora-user-images\image-20230408175318719.png)
+The return format is as follows (all APIs return JSON):
 
-### path('', TemplateView.as_view(template_name='index.html'))
+All 'all' APIs return all database data, so the format is consistent with the database.
 
-该链接不是api，链接到前端编译好的html入口上，实现前后端一体化，实现django同时启动前后端。
+All 'per' return { 'per': num}, num = original value * 100.
 
-### 其他数据类型api
+All 'sum' return { 'sum': num}, num is generally the original value, in special cases return original value / 10000.
 
-接下来所有的api均遵循一个原则：api/（返回值类型，data，img，video等）/ 数据库表 / 操作 / 附加条件/附加条件 。。。
+**PS: <...> in the API is a wildcard, formatted as <data type: variable name>**
 
-例如，本api表示该api寻求返回data类型数据，需要查nmainland表，返回所有数据
-
-其中操作符有 all，per，sum等 ，分别表示查所有，查询同比增长，查询总和
-
-返回值格式如下（所有api均返回json）：
-
-所有all的api返回所有数据库的数据，所以格式和数据库一致
-
-所有per返回{ ‘per’ ：num}，num=原值*100
-
-所有sum返回{ ‘sum’ ：num}，num一般为原值，特殊情况返回原值/10000
-
-**ps：api里的<…>为通配符，格式为<数据类型：变量名称>**
-
-celery启动命令win,linux不需要
+celery startup command for the win, not needed for Linux
 celery worker -A tasks --loglevel=info -P eventlet
 celery -A tasks worker --loglevel=info -P eventlet
 
 redis
 ./redis-server.exe redis.windows.conf
 
-## 必须的包
+## Required Packages
 django==3.1.7
 dmPython
 django_dmPython
@@ -73,5 +60,5 @@ pandas
 redis
 django-pandas
 django-cors-headers
-numpy(捆绑安装)
+numpy (bundled installation)
 scikit_learn
