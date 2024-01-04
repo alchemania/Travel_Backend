@@ -5,7 +5,6 @@ from django.db import models
 
 # Create your models here.
 
-
 class Ml(models.Model):
     # uuid v3 v5 都是值相同id相同，这里给随机值
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
