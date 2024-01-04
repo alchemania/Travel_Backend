@@ -1,3 +1,4 @@
 .idea
-/ml/migrations/
-/api/migrations/
+/ml/migrations/*
+/api/migrations/*
+/ca_certificates/*
