@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "api",
     "ml",
-    "corsheaders"
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
@@ -83,14 +83,17 @@ WSGI_APPLICATION = "TravelServer.wsgi.application"
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django_dmPython',  # 使用的数据库后端
-        'NAME': 'TRAVEL',
-        'USER': 'DJANGO',
-        'PASSWORD': 'Alphabet22136',
-        'HOST': 'localhost',
-        'PORT': '5237',
-        'OPTIONS': {'local_code': 1, 'connection_timeout': 5}
-    }
+        'ENGINE': 'django_tidb',
+        'NAME': 'django',
+        'USER': '4JHciBfpftZR67E.root',
+        'PASSWORD': 'S6bmjfTQFTA6QT6K',
+        'HOST': 'gateway01.us-west-2.prod.aws.tidbcloud.com',
+        'PORT': 4000,
+        'OPTIONS': {
+            'ssl_mode': 'VERIFY_IDENTITY',
+            'ssl': {'ca': '<CA_PATH>'}
+        }
+    },
 }
 
 # Password validation

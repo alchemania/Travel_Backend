@@ -14,7 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, re_path
+from django.urls import path
 from django.views.generic import TemplateView
 
 import api.views
@@ -22,7 +22,7 @@ import ml.views
 
 urlpatterns = [
     path("admin", admin.site.urls),
-    path("api/data/nmainland/all", api.views.api_nmainland_all),
+    path("api/data/nmainland/all", api.views.api_sh_visitors_all),
     path('api/data/nmainland/sum/<int:year>', api.views.api_nmainland_sum_year),
     path('api/data/nmainland/per/<int:year>', api.views.api_nmainland_per_year),
     path('api/data/nmainland/sum/<int:year>/<int:month>', api.views.api_nmainland_sum_month),

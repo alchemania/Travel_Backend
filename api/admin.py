@@ -1,7 +1,7 @@
 from django.contrib import admin
-from api.models import HotelData, ForeignTravelData, NonMainlandTravelData
+from api.models import DbshHotel, DbShvisitorsBycountry, DbShvisitors
 
 # Register your models here.
-admin.site.register(HotelData)
-admin.site.register(ForeignTravelData)
-admin.site.register(NonMainlandTravelData)
+admin.site.register(DbshHotel)
+admin.site.register(DbShvisitorsBycountry)
+admin.site.register(DbShvisitors)

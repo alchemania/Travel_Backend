@@ -1,19 +1,27 @@
 from django.db import models
-import json
 
 
-class NonMainlandTravelData(models.Model):
-    DATE = models.DateField(primary_key=True, db_column='日期')
-    SUM = models.IntegerField(db_column='合计')
-    FOREIGN = models.IntegerField(db_column='外国人')
-    HM = models.IntegerField(db_column='港澳')
-    TW = models.IntegerField(db_column='台湾省')
+class DbShvisitors(models.Model):
+    DATE = models.DateField(primary_key=True, db_column='date')
+    FOREIGN = models.IntegerField(db_column='global_entry')
+    HM = models.IntegerField(db_column='hkmo_entry')
+    TW = models.IntegerField(db_column='tw_entry')
 
     class Meta:
-        db_table = 'data_nonmainland'
+        db_table = 'sh_visitors'
 
 
-class ForeignTravelData(models.Model):
+class DbShvisitorsDaily(models.Model):
+    DATE = models.DateField(primary_key=True, db_column='date')
+    FOREIGN = models.IntegerField(db_column='global_entry')
+    HM = models.IntegerField(db_column='hkmo_entry')
+    TW = models.IntegerField(db_column='tw_entry')
+
+    class Meta:
+        db_table = 'sh_visitors_daily'
+
+
+class DbShvisitorsBycountry(models.Model):
     DATE = models.DateField(primary_key=True, db_column='日期')
     Japan = models.IntegerField(db_column='日本')
     Singapore = models.IntegerField(db_column='新加坡')
@@ -30,10 +38,10 @@ class ForeignTravelData(models.Model):
     NewZealand = models.IntegerField(db_column='新西兰')
 
     class Meta:
-        db_table = 'data_foreign'
+        db_table = 'sh_visitors_bycountry'
 
 
-class HotelData(models.Model):
+class DbshHotel(models.Model):
     DATE = models.DateField(primary_key=True, db_column='日期')
     avg_rent_rate = models.FloatField(db_column='星级平均出租率')
     avg_price = models.IntegerField(db_column='星级平均房价')
@@ -41,4 +49,4 @@ class HotelData(models.Model):
     avg_price_5 = models.IntegerField(db_column='五星级平均房价')
 
     class Meta:
-        db_table = 'data_hotel'
+        db_table = 'sh_hotel'

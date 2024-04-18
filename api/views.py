@@ -4,12 +4,12 @@ import requests
 from django.db.models import Sum
 from django.http import JsonResponse
 
-from api.models import NonMainlandTravelData, HotelData, ForeignTravelData
+from api.models import DbShvisitors, DbshHotel, DbShvisitorsBycountry
 
 
 # 查出nmainland表中所有数据
-def api_nmainland_all(request):
-    data = NonMainlandTravelData.objects.all()
+def api_sh_visitors_all(request):
+    data = DbShvisitors.objects.all()
     res = {
         "timeline": [],
         "frn": [],
@@ -25,15 +25,15 @@ def api_nmainland_all(request):
     return JsonResponse(res)
 
 
-# 计算出nmainland表中某一年的所有入境人数
+# 计算出sh表中某一年的所有入境人数
 def api_nmainland_sum_year(request, year):
     try:
         today = datetime.datetime.today()
         # 判断是否为今年，是今年的话数据不完全，返回目前为止的数据
         if year == today.year:
-            year_sum = NonMainlandTravelData.objects.filter(DATE__lte=today, DATE__year=year).aggregate(Sum('SUM'))
+            year_sum = DbShvisitors.objects.filter(DATE__lte=today, DATE__year=year).aggregate(Sum('SUM'))
         else:
-            year_sum = NonMainlandTravelData.objects.filter(DATE__year=year).aggregate(Sum('SUM'))
+            year_sum = DbShvisitors.objects.filter(DATE__year=year).aggregate(Sum('SUM'))
         return JsonResponse({'sum': 0 if year_sum['SUM__sum'] is None else year_sum['SUM__sum']})
     except Exception:
         return JsonResponse({'sum': 0})
@@ -41,27 +41,27 @@ def api_nmainland_sum_year(request, year):
 
 # 计算某一年的同比增长
 def api_nmainland_per_year(request, year):
-    n_sum = NonMainlandTravelData.objects.filter(DATE__year=year).aggregate(Sum('SUM'))['SUM__sum']
-    l_sum = NonMainlandTravelData.objects.filter(DATE__year=(year - 1)).aggregate(Sum('SUM'))['SUM__sum']
+    n_sum = DbShvisitors.objects.filter(DATE__year=year).aggregate(Sum('SUM'))['SUM__sum']
+    l_sum = DbShvisitors.objects.filter(DATE__year=(year - 1)).aggregate(Sum('SUM'))['SUM__sum']
     return JsonResponse({'per': round(100 * (n_sum - l_sum) / l_sum, 2)})
 
 
 # 返回某一个月的入境人数
 def api_nmainland_sum_month(request, year, month):
-    month_sum = NonMainlandTravelData.objects.filter(DATE__lte=f'{year}-{month}-1').last().SUM
+    month_sum = DbShvisitors.objects.filter(DATE__lte=f'{year}-{month}-1').last().SUM
     return JsonResponse({'sum': month_sum})
 
 
 # 计算某一个月的同比增长
 def api_nmainland_per_month(request, year, month):
-    n_sum = NonMainlandTravelData.objects.filter(DATE__lte=f'{year}-{month}-1').last().SUM
-    l_sum = NonMainlandTravelData.objects.filter(DATE__lte=f'{year - 1}-{month}-1').last().SUM
+    n_sum = DbShvisitors.objects.filter(DATE__lte=f'{year}-{month}-1').last().SUM
+    l_sum = DbShvisitors.objects.filter(DATE__lte=f'{year - 1}-{month}-1').last().SUM
     return JsonResponse({'per': round((n_sum - l_sum) / l_sum, 2)})
 
 
 # 查询酒店的所有数据
 def api_hotel_all(request):
-    data = HotelData.objects.all()
+    data = DbshHotel.objects.all()
     res = {
         "timeline": [],
         "ap": [],
@@ -82,7 +82,7 @@ def api_hotel_all(request):
 # 其实这个是预测api，但是预测的数据已经放入数据库，所以直接查询
 def api_hotel_rate(request):
     today = datetime.datetime.today()
-    rate = HotelData.objects.filter(DATE__year=today.year, DATE__month=today.month).first().avg_rent_rate
+    rate = DbshHotel.objects.filter(DATE__year=today.year, DATE__month=today.month).first().avg_rent_rate
     return JsonResponse({'per': rate})
 
 
@@ -99,15 +99,15 @@ def api_weather(request):
 # 返回国家排名
 def api_country_rate(request):
     # 查出2020之前所有国家入境人次
-    sum_all = ForeignTravelData.objects.filter(DATE__lte='2019-12-30') \
+    sum_all = DbShvisitorsBycountry.objects.filter(DATE__lte='2019-12-30') \
         .aggregate(Sum('Japan'), Sum('Singapore'), Sum('Tailand'), Sum('Korea'), Sum('US'), Sum('Canada'), Sum('UK'),
                    Sum('Franch'), Sum('German'), Sum('Italy'), Sum('Russia'), Sum('Australia'), Sum('NewZealand'))
     # 查出2019年所有国家入境人次
-    sum_period = ForeignTravelData.objects.filter(DATE__lte='2019-12-30', DATE__gte='2018-12-30') \
+    sum_period = DbShvisitorsBycountry.objects.filter(DATE__lte='2019-12-30', DATE__gte='2018-12-30') \
         .aggregate(Sum('Japan'), Sum('Singapore'), Sum('Tailand'), Sum('Korea'), Sum('US'), Sum('Canada'), Sum('UK'),
                    Sum('Franch'), Sum('German'), Sum('Italy'), Sum('Russia'), Sum('Australia'), Sum('NewZealand'))
     # 查出2018年所有国家入境人次
-    sum_tmp = ForeignTravelData.objects.filter(DATE__lte='2018-12-30', DATE__gte='2017-12-30') \
+    sum_tmp = DbShvisitorsBycountry.objects.filter(DATE__lte='2018-12-30', DATE__gte='2017-12-30') \
         .aggregate(Sum('Japan'), Sum('Singapore'), Sum('Tailand'), Sum('Korea'), Sum('US'), Sum('Canada'), Sum('UK'),
                    Sum('Franch'), Sum('German'), Sum('Italy'), Sum('Russia'), Sum('Australia'), Sum('NewZealand'))
     # 转字典

@@ -12,7 +12,7 @@ import numpy as np
 from celery import Celery
 from dateutil.relativedelta import relativedelta
 
-from api.models import NonMainlandTravelData, HotelData
+from api.models import DbShvisitors, DbshHotel
 from ml.models import Ml
 from django_pandas.io import read_frame
 from sklearn.preprocessing import MinMaxScaler
@@ -39,13 +39,13 @@ def re_train(mid: int):
     EPOCHS = paras['EPOCHS']
     BATCH_SIZE = paras['BATCH_SIZE']
     # 超参数 end
-    if specModel.dataSource == NonMainlandTravelData._meta.db_table:
-        data = NonMainlandTravelData.objects.filter(DATE__gte=specModel.dataLearnedBegin,
-                                                    DATE__lte=specModel.dataLearnedEnd)
+    if specModel.dataSource == DbShvisitors._meta.db_table:
+        data = DbShvisitors.objects.filter(DATE__gte=specModel.dataLearnedBegin,
+                                           DATE__lte=specModel.dataLearnedEnd)
         inp = read_frame(qs=data)
         inp = inp.drop(columns=["DATE", "SUM"]).values
-    elif specModel.dataSource == HotelData._meta.db_table:
-        data = HotelData.objects.filter(DATE__gte=specModel.dataLearnedBegin,
+    elif specModel.dataSource == DbshHotel._meta.db_table:
+        data = DbshHotel.objects.filter(DATE__gte=specModel.dataLearnedBegin,
                                         DATE__lte=specModel.dataLearnedEnd)
         inp = read_frame(qs=data)
         inp = inp.drop(columns=["DATE"]).values
@@ -104,9 +104,9 @@ def predict(mid: int, isinsight: bool):
     PRED_STEP = paras['PRED_STEP']
     PRED_LENGTH = paras['PRED_LENGTH']
     LEARNING_RATE = paras['LEARNING_RATE']
-    if src == NonMainlandTravelData._meta.db_table:
-        datas = NonMainlandTravelData.objects.filter(DATE__gte=specModel.dataLearnedBegin,
-                                                     DATE__lte=specModel.dataLearnedEnd)
+    if src == DbShvisitors._meta.db_table:
+        datas = DbShvisitors.objects.filter(DATE__gte=specModel.dataLearnedBegin,
+                                            DATE__lte=specModel.dataLearnedEnd)
         inp = read_frame(qs=datas)
         inp = inp.drop(columns=["DATE", "SUM"]).values
         # 数据标准化
@@ -132,17 +132,17 @@ def predict(mid: int, isinsight: bool):
             return df.to_dict(orient='records')
         else:
             res = np.concatenate([val, out], axis=1)
-            NonMainlandTravelData.objects.filter(DATE__gt=specModel.dataLearnedEnd).delete()
-            pred = [NonMainlandTravelData(
+            DbShvisitors.objects.filter(DATE__gt=specModel.dataLearnedEnd).delete()
+            pred = [DbShvisitors(
                 DATE=timeline[index],
                 SUM=x[0],
                 FOREIGN=x[1],
                 HM=x[2],
                 TW=x[3]
             ) for index, x in enumerate(res)]
-            NonMainlandTravelData.objects.bulk_create(pred)
-    elif specModel.dataSource == HotelData._meta.db_table:
-        datas = HotelData.objects.filter(DATE__gte=specModel.dataLearnedBegin,
+            DbShvisitors.objects.bulk_create(pred)
+    elif specModel.dataSource == DbshHotel._meta.db_table:
+        datas = DbshHotel.objects.filter(DATE__gte=specModel.dataLearnedBegin,
                                          DATE__lte=specModel.dataLearnedEnd)
         inp = read_frame(qs=datas)
         inp = inp.drop(columns=["DATE"]).values
@@ -167,12 +167,12 @@ def predict(mid: int, isinsight: bool):
             return df.to_dict(orient='records')
         # 删除大于dataEnd的数据，是预测值，没有意义
         else:
-            HotelData.objects.filter(DATE__gt=specModel.dataLearnedEnd).delete()
-            pred = [HotelData(
+            DbshHotel.objects.filter(DATE__gt=specModel.dataLearnedEnd).delete()
+            pred = [DbshHotel(
                 DATE=timeline[index],
                 avg_rent_rate=x[0],
                 avg_price=x[1],
                 avg_rent_rate_5=x[2],
                 avg_price_5=x[3]
             ) for index, x in enumerate(out)]
-            HotelData.objects.bulk_create(pred)
+            DbshHotel.objects.bulk_create(pred)
