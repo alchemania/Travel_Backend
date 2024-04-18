@@ -48,7 +48,7 @@ def api_nmainland_per_year(request, year):
 
 # 返回某一个月的入境人数
 def api_nmainland_sum_month(request, year, month):
-    month_sum = DbShvisitors.objects.filter(DATE__lte=f'{year}-{month}-1').last().SUM
+    month_sum = DbShvisitors.objects.filter(DATE__lte=f'{year}-{month}-1').last()
     return JsonResponse({'sum': month_sum})
 
 

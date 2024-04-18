@@ -91,7 +91,7 @@ DATABASES = {
         'PORT': 4000,
         'OPTIONS': {
             'ssl_mode': 'VERIFY_IDENTITY',
-            'ssl': {'ca': '<CA_PATH>'}
+            'ssl': {'ca': "/etc/ssl/cert.pem"}
         }
     },
 }

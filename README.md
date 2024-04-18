@@ -95,3 +95,9 @@ The project, developed for the 16th China College Students’ Computer Design Co
 ## Contributing
 
 Contributors can improve or extend the project by following standard open-source contribution guidelines, including forking the repository, creating feature branches, and submitting pull requests.
+
+## Error fixing
+1. MacOS only --- migration segmentation fault: rebuild mysqlclient, remember to execute 
+```shell
+export PKG_CONFIG_PATH="$(brew --prefix)/opt/mysql-client/lib/pkgconfig"
+```

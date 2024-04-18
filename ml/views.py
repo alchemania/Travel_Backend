@@ -2,11 +2,19 @@ import datetime
 import json
 import time
 
-from tasks import re_train, predict
+# from tasks import re_train, predict
 from ml.models import Ml
 
 from django.http import JsonResponse
 from django.forms.models import model_to_dict
+
+
+def predict():
+    pass
+
+
+def re_train():
+    pass
 
 
 def ml_re_train(request):
