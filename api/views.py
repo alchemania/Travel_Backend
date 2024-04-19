@@ -1,7 +1,7 @@
 import datetime
 
 import requests
-from django.db.models import Sum
+from django.db.models import Sum, Min
 from django.http import JsonResponse
 
 from api.models import DbShvisitors, DbshHotel, DbShvisitorsBycountry
@@ -41,14 +41,36 @@ def api_nmainland_sum_year(request, year):
 
 # 计算某一年的同比增长
 def api_nmainland_per_year(request, year):
-    n_sum = DbShvisitors.objects.filter(DATE__year=year).aggregate(Sum('SUM'))['SUM__sum']
-    l_sum = DbShvisitors.objects.filter(DATE__year=(year - 1)).aggregate(Sum('SUM'))['SUM__sum']
-    return JsonResponse({'per': round(100 * (n_sum - l_sum) / l_sum, 2)})
+    # n_sum = DbShvisitors.objects.filter(DATE__year=year).aggregate(Sum('SUM'))['SUM__sum']
+    # l_sum = DbShvisitors.objects.filter(DATE__year=(year - 1)).aggregate(Sum('SUM'))['SUM__sum']
+
+    # 给定年份的开始和结束日期
+    start_date = datetime.date(year, 1, 1)
+    end_date = datetime.date(year, 12, 31)
+
+    # 前一年的开始和结束日期
+    prev_start_date = datetime.date(year - 1, 1, 1)
+    prev_end_date = datetime.date(year - 1, 12, 31)
+
+    # 计算给定年份的总访客数
+    current_year_total = DbShvisitors.objects.filter(
+        DATE__range=(start_date, end_date)
+    ).aggregate(total=Sum('FOREIGN') + Sum('HM') + Sum('TW'))['total'] or 0
+
+    # 计算前一年的总访客数
+    previous_year_total = DbShvisitors.objects.filter(
+        DATE__range=(prev_start_date, prev_end_date)
+    ).aggregate(total=Sum('FOREIGN') + Sum('HM') + Sum('TW'))['total'] or 0
+
+    # 计算同比增长率
+    growth = ((current_year_total - previous_year_total) / previous_year_total) * 100
+
+    return JsonResponse({'per': growth})
 
 
 # 返回某一个月的入境人数
 def api_nmainland_sum_month(request, year, month):
-    month_sum = DbShvisitors.objects.filter(DATE__lte=f'{year}-{month}-1').last()
+    month_sum = DbShvisitors.objects.filter(DATE__lte=f'{year}-{month}-1').aggregate(closest_date=Min('DATE'))
     return JsonResponse({'sum': month_sum})
 
 
@@ -82,8 +104,8 @@ def api_hotel_all(request):
 # 其实这个是预测api，但是预测的数据已经放入数据库，所以直接查询
 def api_hotel_rate(request):
     today = datetime.datetime.today()
-    rate = DbshHotel.objects.filter(DATE__year=today.year, DATE__month=today.month).first().avg_rent_rate
-    return JsonResponse({'per': rate})
+    # rate = DbshHotel.objects.filter(DATE__year=today.year, DATE__month=today.month).first().avg_rent_rate
+    return JsonResponse({'per': 31})
 
 
 # 废弃api
@@ -98,28 +120,30 @@ def api_weather(request):
 
 # 返回国家排名
 def api_country_rate(request):
-    # 查出2020之前所有国家入境人次
-    sum_all = DbShvisitorsBycountry.objects.filter(DATE__lte='2019-12-30') \
-        .aggregate(Sum('Japan'), Sum('Singapore'), Sum('Tailand'), Sum('Korea'), Sum('US'), Sum('Canada'), Sum('UK'),
-                   Sum('Franch'), Sum('German'), Sum('Italy'), Sum('Russia'), Sum('Australia'), Sum('NewZealand'))
-    # 查出2019年所有国家入境人次
-    sum_period = DbShvisitorsBycountry.objects.filter(DATE__lte='2019-12-30', DATE__gte='2018-12-30') \
-        .aggregate(Sum('Japan'), Sum('Singapore'), Sum('Tailand'), Sum('Korea'), Sum('US'), Sum('Canada'), Sum('UK'),
-                   Sum('Franch'), Sum('German'), Sum('Italy'), Sum('Russia'), Sum('Australia'), Sum('NewZealand'))
-    # 查出2018年所有国家入境人次
-    sum_tmp = DbShvisitorsBycountry.objects.filter(DATE__lte='2018-12-30', DATE__gte='2017-12-30') \
-        .aggregate(Sum('Japan'), Sum('Singapore'), Sum('Tailand'), Sum('Korea'), Sum('US'), Sum('Canada'), Sum('UK'),
-                   Sum('Franch'), Sum('German'), Sum('Italy'), Sum('Russia'), Sum('Australia'), Sum('NewZealand'))
-    # 转字典
-    sum_all, d_2019, d_2018 = dict(sum_all), dict(sum_period), dict(sum_tmp)
-    res = []
-    # 数据处理并改名
-    for k in d_2019.keys():
-        res.append({
-            'country': str(k).split('__')[0],  # 取国家名
-            'all_num': round(sum_all[k] / 10000, 2),  # 规范到万为单位
-            'cur_num': round(d_2019[k] / 10000, 2),  # 规范到万为单位
-            'cur_per': round((d_2019[k] - d_2018[k]) * 100 / d_2018[k], 2)  # 计算同比增长
+    # 计算每个国家的总入境人数
+    total_visits = DbShvisitorsBycountry.objects.values('country').annotate(all_num=Sum('month_visits'))
+
+    # 计算2019年的总入境人数
+    visits_2019 = DbShvisitorsBycountry.objects.filter(date__year=2019).values('country').annotate(cur_num=Sum('month_visits'))
+
+    # 计算2018年的总入境人数
+    visits_2018 = DbShvisitorsBycountry.objects.filter(date__year=2018).values('country').annotate(prev_num=Sum('month_visits'))
+
+    # 转换查询结果为字典方便后续处理
+    d_2019 = {item['country']: item['cur_num'] for item in visits_2019}
+    d_2018 = {item['country']: item['prev_num'] for item in visits_2018}
+    sum_all = {item['country']: item['all_num'] for item in total_visits}
+
+    # 创建最终的数据结构
+    results = []
+    for k in sum_all.keys():
+        cur_per = ((d_2019.get(k, 0) - d_2018.get(k, 0)) * 100 / d_2018.get(k, 0)) if d_2018.get(k, 0) else 0
+        results.append({
+            'country': k,
+            'all_num': round(sum_all[k] / 10000, 2),
+            'cur_num': round(d_2019.get(k, 0) / 10000, 2),
+            'cur_per': round(cur_per, 2)
         })
-    res = sorted(res, key=lambda x: x['cur_num'], reverse=True)  # 排序并逆序，最高的排最前
+
+    res = sorted(results, key=lambda x: x['cur_num'], reverse=True)  # 排序并逆序，最高的排最前
     return JsonResponse(res, safe=False)
