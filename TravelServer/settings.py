@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 import os
+import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,6 +21,28 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-*g#dz4)7qb9q8pv7i9_9d2ir)f&9g$0p5y!vds*8huhox0=rle"
+
+platform = sys.platform
+if platform.startswith('linux'):
+    ca = {
+        'ssl': {
+            'ca': '/etc/ssl/certs/ca-certificates.crt'
+        }
+    }
+elif platform == 'darwin':
+    ca = {
+        'ssl': {
+            'ca': "/etc/ssl/cert.pem"
+        }
+    }
+elif platform.startswith('win'):
+    ca = {
+        'ssl': {
+            'ca': os.path.join(BASE_DIR, 'isrgrootx1.pem')
+        },
+    }
+else:
+    ca = {}
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -90,8 +113,9 @@ DATABASES = {
         'HOST': 'gateway01.us-west-2.prod.aws.tidbcloud.com',
         'PORT': 4000,
         'OPTIONS': {
+            'charset': 'utf8mb4',
             'ssl_mode': 'VERIFY_IDENTITY',
-            'ssl': {'ca': "/etc/ssl/cert.pem"}
+            **ca
         }
     },
 }
@@ -169,6 +193,3 @@ CORS_ALLOW_HEADERS = (
 )
 
 APPEND_SLASH = False
-
-LANGUAGE_CODE = 'zh-Hans'
-TIME_ZONE = 'Asia/Shanghai'
