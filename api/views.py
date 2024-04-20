@@ -1,15 +1,15 @@
 import datetime
 
 import requests
-from django.db.models import Sum, Min
+from django.db.models import Sum, Min, F
 from django.http import JsonResponse
 
-from api.models import DbShvisitors, DbshHotel, DbShvisitorsBycountry
+from api.models import DbShvisitorsMonthly, DbshHotel, DbShvisitorsBycountry, DbShvisitorsDaily, \
+    DbShvisitorsDailyPredicted
 
 
-# 查出nmainland表中所有数据
 def api_sh_visitors_all(request):
-    data = DbShvisitors.objects.all()
+    data = DbShvisitorsMonthly.objects.all()
     res = {
         "timeline": [],
         "frn": [],
@@ -25,60 +25,94 @@ def api_sh_visitors_all(request):
     return JsonResponse(res)
 
 
-# 计算出sh表中某一年的所有入境人数
-def api_nmainland_sum_year(request, year):
-    try:
-        today = datetime.datetime.today()
-        # 判断是否为今年，是今年的话数据不完全，返回目前为止的数据
-        if year == today.year:
-            year_sum = DbShvisitors.objects.filter(DATE__lte=today, DATE__year=year).aggregate(Sum('SUM'))
-        else:
-            year_sum = DbShvisitors.objects.filter(DATE__year=year).aggregate(Sum('SUM'))
-        return JsonResponse({'sum': 0 if year_sum['SUM__sum'] is None else year_sum['SUM__sum']})
-    except Exception:
-        return JsonResponse({'sum': 0})
+def api_sh_visitors_sum(request, freq, year, month, day):
+    # 构建当前日期和前一年的日期
+    if freq == 'y':
+        current_date = datetime.date(year, 1, 1)
+        current_total = DbShvisitorsDailyPredicted.objects.filter(
+            DATE__year=current_date.year,
+        ).aggregate(total=Sum(F('FOREIGN') + F('HM') + F('TW')))['total']
+    elif freq == 'm':
+        if month is None:
+            raise ValueError("Month is required for monthly growth calculation")
+        current_date = datetime.date(year, month, 1)
+        current_total = DbShvisitorsDailyPredicted.objects.filter(
+            DATE__year=current_date.year,
+            DATE__month=current_date.month,
+        ).aggregate(total=Sum(F('FOREIGN') + F('HM') + F('TW')))['total']
+    elif freq == 'd':
+        if month is None or day is None:
+            raise ValueError("Month and day are required for daily growth calculation")
+        current_date = datetime.date(year, month, day)
+        current_total = DbShvisitorsDailyPredicted.objects.filter(
+            DATE__year=current_date.year,
+            DATE__month=current_date.month,
+            DATE__day=current_date.day
+        ).aggregate(total=Sum(F('FOREIGN') + F('HM') + F('TW')))['total']
+    else:
+        raise ValueError("Frequency must be 'y', 'm', or 'd'")
+
+    return JsonResponse({'sum': current_total})
 
 
-# 计算某一年的同比增长
-def api_nmainland_per_year(request, year):
-    # n_sum = DbShvisitors.objects.filter(DATE__year=year).aggregate(Sum('SUM'))['SUM__sum']
-    # l_sum = DbShvisitors.objects.filter(DATE__year=(year - 1)).aggregate(Sum('SUM'))['SUM__sum']
+def api_sh_visitors_yoy(request, freq, year, month, day):
+    # 构建当前日期和前一年的日期
+    if freq == 'y':
+        current_date = datetime.date(year, 1, 1)
+        previous_date = datetime.date(year - 1, 1, 1)
+        # 计算当前日期的总访问者
+        current_total = DbShvisitorsDailyPredicted.objects.filter(
+            DATE__year=current_date.year,
+        ).aggregate(total=Sum(F('FOREIGN') + F('HM') + F('TW')))['total']
 
-    # 给定年份的开始和结束日期
-    start_date = datetime.date(year, 1, 1)
-    end_date = datetime.date(year, 12, 31)
+        # 计算前一年相同日期的总访问者
+        previous_total = DbShvisitorsDailyPredicted.objects.filter(
+            DATE__year=previous_date.year,
+        ).aggregate(total=Sum(F('FOREIGN') + F('HM') + F('TW')))['total']
+    elif freq == 'm':
+        if month is None:
+            raise ValueError("Month is required for monthly growth calculation")
+        current_date = datetime.date(year, month, 1)
+        previous_date = datetime.date(year - 1, month, 1)
+        # 计算当前日期的总访问者
+        current_total = DbShvisitorsDailyPredicted.objects.filter(
+            DATE__year=current_date.year,
+            DATE__month=current_date.month,
+        ).aggregate(total=Sum(F('FOREIGN') + F('HM') + F('TW')))['total']
 
-    # 前一年的开始和结束日期
-    prev_start_date = datetime.date(year - 1, 1, 1)
-    prev_end_date = datetime.date(year - 1, 12, 31)
+        # 计算前一年相同日期的总访问者
+        previous_total = DbShvisitorsDailyPredicted.objects.filter(
+            DATE__year=previous_date.year,
+            DATE__month=previous_date.month,
+        ).aggregate(total=Sum(F('FOREIGN') + F('HM') + F('TW')))['total']
+    elif freq == 'd':
+        if month is None or day is None:
+            raise ValueError("Month and day are required for daily growth calculation")
+        current_date = datetime.date(year, month, day)
+        previous_date = datetime.date(year - 1, month, day)
+        # 计算当前日期的总访问者
+        current_total = DbShvisitorsDailyPredicted.objects.filter(
+            DATE__year=current_date.year,
+            DATE__month=current_date.month,
+            DATE__day=current_date.day
+        ).aggregate(total=Sum(F('FOREIGN') + F('HM') + F('TW')))['total']
 
-    # 计算给定年份的总访客数
-    current_year_total = DbShvisitors.objects.filter(
-        DATE__range=(start_date, end_date)
-    ).aggregate(total=Sum('FOREIGN') + Sum('HM') + Sum('TW'))['total'] or 0
+        # 计算前一年相同日期的总访问者
+        previous_total = DbShvisitorsDailyPredicted.objects.filter(
+            DATE__year=previous_date.year,
+            DATE__month=previous_date.month,
+            DATE__day=previous_date.day
+        ).aggregate(total=Sum(F('FOREIGN') + F('HM') + F('TW')))['total']
+    else:
+        raise ValueError("Frequency must be 'y', 'm', or 'd'")
 
-    # 计算前一年的总访客数
-    previous_year_total = DbShvisitors.objects.filter(
-        DATE__range=(prev_start_date, prev_end_date)
-    ).aggregate(total=Sum('FOREIGN') + Sum('HM') + Sum('TW'))['total'] or 0
+    # 如果没有前一年的数据，则返回None
+    if previous_total is None or current_total is None:
+        return JsonResponse({'per': 0})
 
     # 计算同比增长率
-    growth = ((current_year_total - previous_year_total) / previous_year_total) * 100
-
-    return JsonResponse({'per': growth})
-
-
-# 返回某一个月的入境人数
-def api_nmainland_sum_month(request, year, month):
-    month_sum = DbShvisitors.objects.filter(DATE__lte=f'{year}-{month}-1').aggregate(closest_date=Min('DATE'))
-    return JsonResponse({'sum': month_sum})
-
-
-# 计算某一个月的同比增长
-def api_nmainland_per_month(request, year, month):
-    n_sum = DbShvisitors.objects.filter(DATE__lte=f'{year}-{month}-1').last().SUM
-    l_sum = DbShvisitors.objects.filter(DATE__lte=f'{year - 1}-{month}-1').last().SUM
-    return JsonResponse({'per': round((n_sum - l_sum) / l_sum, 2)})
+    growth = ((current_total - previous_total) / previous_total) * 100 if previous_total != 0 else float('inf')
+    return JsonResponse({'per': round(growth, 2)})
 
 
 # 查询酒店的所有数据
@@ -124,10 +158,12 @@ def api_country_rate(request):
     total_visits = DbShvisitorsBycountry.objects.values('country').annotate(all_num=Sum('month_visits'))
 
     # 计算2019年的总入境人数
-    visits_2019 = DbShvisitorsBycountry.objects.filter(date__year=2019).values('country').annotate(cur_num=Sum('month_visits'))
+    visits_2019 = DbShvisitorsBycountry.objects.filter(date__year=2019).values('country').annotate(
+        cur_num=Sum('month_visits'))
 
     # 计算2018年的总入境人数
-    visits_2018 = DbShvisitorsBycountry.objects.filter(date__year=2018).values('country').annotate(prev_num=Sum('month_visits'))
+    visits_2018 = DbShvisitorsBycountry.objects.filter(date__year=2018).values('country').annotate(
+        prev_num=Sum('month_visits'))
 
     # 转换查询结果为字典方便后续处理
     d_2019 = {item['country']: item['cur_num'] for item in visits_2019}

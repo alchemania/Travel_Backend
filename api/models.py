@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class DbShvisitors(models.Model):
+class DbShvisitorsMonthly(models.Model):
     DATE = models.DateField(primary_key=True, db_column='date')
     FOREIGN = models.IntegerField(db_column='global_entry')
     HM = models.IntegerField(db_column='hkmo_entry')
@@ -19,6 +19,16 @@ class DbShvisitorsDaily(models.Model):
 
     class Meta:
         db_table = 'sh_visitors_daily'
+
+
+class DbShvisitorsDailyPredicted(models.Model):
+    DATE = models.DateField(primary_key=True, db_column='date')
+    FOREIGN = models.IntegerField(db_column='global_entry')
+    HM = models.IntegerField(db_column='hkmo_entry')
+    TW = models.IntegerField(db_column='tw_entry')
+
+    class Meta:
+        db_table = 'sh_visitors_daily_pred'
 
 
 class DbShvisitorsBycountry(models.Model):

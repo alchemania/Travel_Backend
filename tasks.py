@@ -12,7 +12,7 @@ import numpy as np
 from celery import Celery
 from dateutil.relativedelta import relativedelta
 
-from api.models import DbShvisitors, DbshHotel
+from api.models import DbShvisitorsMonthly, DbshHotel
 from ml.models import Ml
 from django_pandas.io import read_frame
 from sklearn.preprocessing import MinMaxScaler
@@ -39,9 +39,9 @@ def re_train(mid: int):
     EPOCHS = paras['EPOCHS']
     BATCH_SIZE = paras['BATCH_SIZE']
     # 超参数 end
-    if specModel.dataSource == DbShvisitors._meta.db_table:
-        data = DbShvisitors.objects.filter(DATE__gte=specModel.dataLearnedBegin,
-                                           DATE__lte=specModel.dataLearnedEnd)
+    if specModel.dataSource == DbShvisitorsMonthly._meta.db_table:
+        data = DbShvisitorsMonthly.objects.filter(DATE__gte=specModel.dataLearnedBegin,
+                                                  DATE__lte=specModel.dataLearnedEnd)
         inp = read_frame(qs=data)
         inp = inp.drop(columns=["DATE", "SUM"]).values
     elif specModel.dataSource == DbshHotel._meta.db_table:
@@ -104,9 +104,9 @@ def predict(mid: int, isinsight: bool):
     PRED_STEP = paras['PRED_STEP']
     PRED_LENGTH = paras['PRED_LENGTH']
     LEARNING_RATE = paras['LEARNING_RATE']
-    if src == DbShvisitors._meta.db_table:
-        datas = DbShvisitors.objects.filter(DATE__gte=specModel.dataLearnedBegin,
-                                            DATE__lte=specModel.dataLearnedEnd)
+    if src == DbShvisitorsMonthly._meta.db_table:
+        datas = DbShvisitorsMonthly.objects.filter(DATE__gte=specModel.dataLearnedBegin,
+                                                   DATE__lte=specModel.dataLearnedEnd)
         inp = read_frame(qs=datas)
         inp = inp.drop(columns=["DATE", "SUM"]).values
         # 数据标准化
@@ -132,15 +132,15 @@ def predict(mid: int, isinsight: bool):
             return df.to_dict(orient='records')
         else:
             res = np.concatenate([val, out], axis=1)
-            DbShvisitors.objects.filter(DATE__gt=specModel.dataLearnedEnd).delete()
-            pred = [DbShvisitors(
+            DbShvisitorsMonthly.objects.filter(DATE__gt=specModel.dataLearnedEnd).delete()
+            pred = [DbShvisitorsMonthly(
                 DATE=timeline[index],
                 SUM=x[0],
                 FOREIGN=x[1],
                 HM=x[2],
                 TW=x[3]
             ) for index, x in enumerate(res)]
-            DbShvisitors.objects.bulk_create(pred)
+            DbShvisitorsMonthly.objects.bulk_create(pred)
     elif specModel.dataSource == DbshHotel._meta.db_table:
         datas = DbshHotel.objects.filter(DATE__gte=specModel.dataLearnedBegin,
                                          DATE__lte=specModel.dataLearnedEnd)
