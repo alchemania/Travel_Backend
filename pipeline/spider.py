@@ -27,12 +27,15 @@ user_agents = [
 ]
 
 
-def request_with_retry(url, max_retries=3):
+def request_with_retry(url, max_retries=3, custom_headers={}, ):
     retry_count = 0
     while retry_count < max_retries:
         # 随机选择一个用户代理
         user_agent = random.choice(user_agents)
-        headers = {'User-Agent': user_agent}
+        headers = {
+            'User-Agent': user_agent,
+            **custom_headers
+        }
 
         try:
             response = requests.get(url, headers=headers)
@@ -73,7 +76,7 @@ class BaseSpider:
         pass
 
 
-class HotelSpider(BaseSpider):
+class SHHotelSpider(BaseSpider):
     # pre-defined
     identifier = 'hotel_spider'
     pd_columns = ["日期", "平均出租率", "五星级平均出租率", "平均房价", "五星级平均房价", "平均房价增长",
@@ -239,14 +242,77 @@ class HotelSpider(BaseSpider):
         return pd.DataFrame(self.data, columns=self.pd_columns)
 
 
+class HKVisitorsSpider(BaseSpider):
+    def __init__(self):
+        super().__init__()
+        self.tasks = []
+        self.data = None
+
+    def _get_tasks(self):
+        self.tasks = 'https://www.immd.gov.hk/opendata/hkt/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv'
+
+    def consume(self, url):
+        def download_and_load_csv(link):
+            headers = {
+                'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7'  # 优先请求简体中文，如果不可用则请求其他中文变体
+            }
+            # 使用requests下载CSV文件内容
+            response = request_with_retry(link, custom_headers=headers)
+            # 将下载的内容解码为字符串，然后使用pandas读取
+            from io import StringIO
+            data = StringIO(response.text)
+            return pd.read_csv(data)
+
+        df = download_and_load_csv(url)
+        # 使用pd.to_datetime确保日期格式正确
+        df['日期'] = pd.to_datetime(df['日期'], format='%d-%m-%Y')
+
+        # 计算每个指定的聚合
+        aggregations = {
+            'HK_airport_entry': pd.NamedAgg(column='香港居民', aggfunc=lambda x: x[
+                (df['入境 / 出境'] == '入境') & (df['管制站'] == '機場')].sum()),
+            'CN_airport_entry': pd.NamedAgg(column='內地訪客', aggfunc=lambda x: x[
+                (df['入境 / 出境'] == '入境') & (df['管制站'] == '機場')].sum()),
+            'global_airport_entry': pd.NamedAgg(column='其他訪客',
+                                                aggfunc=lambda x: x[
+                                                    (df['入境 / 出境'] == '入境') & (df['管制站'] == '機場')].sum()),
+            'airport_entry': pd.NamedAgg(column='總計', aggfunc=lambda x: x[
+                (df['入境 / 出境'] == '入境') & (df['管制站'] == '機場')].sum()),
+            'HK_airport_departure': pd.NamedAgg(column='香港居民', aggfunc=lambda x: x[
+                (df['入境 / 出境'] == '出境') & (df['管制站'] == '機場')].sum()),
+            'CN_airport_departure': pd.NamedAgg(column='內地訪客', aggfunc=lambda x: x[
+                (df['入境 / 出境'] == '出境') & (df['管制站'] == '機場')].sum()),
+            'global_airport_departure': pd.NamedAgg(column='其他訪客',
+                                                    aggfunc=lambda x: x[(df['入境 / 出境'] == '出境') & (
+                                                            df['管制站'] == '機場')].sum()),
+            'airport_departure': pd.NamedAgg(column='總計', aggfunc=lambda x: x[
+                (df['入境 / 出境'] == '出境') & (df['管制站'] == '機場')].sum()),
+        }
+
+        # 进行分组和聚合
+        grouped = df.groupby(df['日期'].dt.date).agg(**aggregations).reset_index()
+
+        # 打印结果
+        return grouped
+
+    def run(self):
+        # only 1 task
+        self._get_tasks()
+        self.data = self.consume(self.tasks)
+
+
 # unit test
 if __name__ == '__main__':
-    database_url = "sqlite:///./data.sqlite"
-    engine = create_engine(database_url)
-    query = f"select url from spd_tasks where unique_id like '%{HotelSpider.identifier}%'"
-    df = pd.read_sql_query(query, engine)
-    tasks = df['url'].tolist()
+    # database_url = "sqlite:///./data.sqlite"
+    # engine = create_engine(database_url)
+    # query = f"select url from spd_tasks where unique_id like '%{SHHotelSpider.identifier}%'"
+    # df = pd.read_sql_query(query, engine)
+    # tasks = df['url'].tolist()
+    #
+    # spider = SHHotelSpider('update', tasks)
+    # # spider.run()
+    # spider.consume('https://tjj.sh.gov.cn/ydsj57/20231116/d474b2c8bb5647f2a4041299caad8be7.html')
 
-    spider = HotelSpider('update', tasks)
-    # spider.run()
-    spider.consume('https://tjj.sh.gov.cn/ydsj57/20231116/d474b2c8bb5647f2a4041299caad8be7.html')
+    spider = HKVisitorsSpider()
+    spider.run()
+    print(spider.data)
