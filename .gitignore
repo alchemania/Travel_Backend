@@ -3,3 +3,5 @@
 venv
 */migrations/*
 *pem
+*log
+/pipeline/data.sqlite

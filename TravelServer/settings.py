@@ -193,3 +193,28 @@ CORS_ALLOW_HEADERS = (
 )
 
 APPEND_SLASH = False
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    'formatters': {
+        'standard': {
+            'datefmt': '%Y-%m-%d %H:%M:%S'
+        }
+    },
+    "handlers": {
+        "file": {
+            "formatter": "standard",
+            "level": "DEBUG",
+            "class": "logging.FileHandler",
+            "filename": os.path.join(BASE_DIR, 'server.log'),
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}

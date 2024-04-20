@@ -11,13 +11,19 @@ import time
 import requests
 from lxml import html
 from typing import Literal
-from collections import deque
+import pickle
 
 user_agents = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36',
-    # 更多用户代理字符串...
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko",
+    "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0",
+    "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/13.0.3 Safari/604.1.38"
 ]
 
 
@@ -60,7 +66,7 @@ class BaseSpider:
     def __init__(self):
         pass
 
-    def get_tasks(self, **kwargs):
+    def _get_tasks(self, **kwargs):
         pass
 
     def consume(self, url):
@@ -68,21 +74,26 @@ class BaseSpider:
 
 
 class HotelSpider(BaseSpider):
-    def __init__(self, spider_type: Literal['new', 'update'], tasks: list):
-        super().__init__()
-        self.identifier = 'hotel'
-        self.tasks = tasks
-        self.spider_type = spider_type
-        self.data = pd.DataFrame(
-            columns=["日期", "客房平均出租率", "五星级平均出租率", "平均房价", "五星级平均房价", "平均房价增长",
-                     "五星级房价增长"])
-        self.locs = ["星级饭店客房平均出租率", "五星级", "星级饭店平均房价", "五星级", "星级饭店平均房价增长", "五星级"]
-        self.prefix = 'https://tjj.sh.gov.cn'
-        self.start_url = 'https://tjj.sh.gov.cn/ydsj57/index.html'
-        self.template = 'https://tjj.sh.gov.cn/ydsj57/index_{page}.html'
+    # pre-defined
+    identifier = 'hotel_spider'
+    pd_columns = ["日期", "平均出租率", "五星级平均出租率", "平均房价", "五星级平均房价", "平均房价增长",
+                  "五星级房价增长"]
+    locs = ["星级饭店客房平均出租率", "五星级", "星级饭店平均房价", "五星级", "星级饭店平均房价增长", "五星级"]
+    prefix = 'https://tjj.sh.gov.cn'
+    start_url = 'https://tjj.sh.gov.cn/ydsj57/index.html'
+    template = 'https://tjj.sh.gov.cn/ydsj57/index_{page}.html'
 
-    def get_tasks(self):
-        def pattern1(target: list):
+    def __init__(self, spider_status: Literal['new', 'update'], tasks: list = None):
+        super().__init__()
+        # need initialization
+        self.tasks = tasks
+        self.spider_status = spider_status  # new, update, resume, fetching tasks, stopped
+        self.data = []
+        self.task_pointer = 0  # 关键数据，spider排错的关键
+        self.skipped_tasks = []
+
+    def _get_tasks(self):
+        def pattern_page(target: list):
             pattern = r'^共(\d+)页$'
             # 使用列表推导来筛选符合条件的元素
             # 使用 next() 函数和生成器表达式来找到第一个匹配的元素
@@ -95,7 +106,7 @@ class HotelSpider(BaseSpider):
                 print("page=：", k_value)
                 return k_value
 
-        def pattern2(req_text):
+        def pattern_urls(req_text):
             soup = BeautifulSoup(req_text, 'html.parser')
             # 查找第一个ul标签
             ul_tag = soup.find('ul')
@@ -109,45 +120,48 @@ class HotelSpider(BaseSpider):
                         tmp_list.append(self.prefix + a_tag['href'])
             return tmp_list
 
-        if self.spider_type == 'new':
-            # request_num 1
+        if self.spider_status == 'resume':  # skip
+            self.spider_status = 'running'
+            return
+        elif self.spider_status == 'new':
+            self.spider_status = 'fetching tasks'
+            # # request num k(8+)
             q0 = request_with_retry(self.start_url)
-            k = pattern1(get_pure_text(q0.text))
-
-            # request num k(8+)
+            k = pattern_page(get_pure_text(q0.text))
             for i in tqdm(range(1, k + 1)):
                 if i == 1:
-                    pattern2(q0.text)
+                    self.tasks.append(*pattern_urls(q0.text))
                 else:
                     qi = request_with_retry(self.template.format(page=i))
-                    pattern2(qi.text)
+                    self.tasks.append(*pattern_urls(qi.text))
 
-            # 生成一个随机UUID
-            full_uuid = uuid.uuid4()
             # 将UUID转换为字符串并去掉连字符，然后截取前8个字符
-            short_uuid = str(full_uuid).replace('-', '')[:8]
-            ids = [self.identifier + short_uuid for _ in range(len(self.tasks))]
-            self.tasks = pd.DataFrame([self.tasks, ids], columns=['id', 'url'])
+            ids = [self.identifier + '_' + str(uuid.uuid4()).replace('-', '')[:8] for _ in range(len(self.tasks))]
+            self.tasks = zip(ids, self.tasks)
+            self.spider_status = 'running'
+            return self.tasks
 
-            # df.to_sql('spider_links', con=self.dbEngine, if_exists='replace', index=False)
-        elif self.spider_type == 'update':
+        elif self.spider_status == 'update':
+            self.spider_status = 'fetching tasks'
             # request_num 1
             q0 = request_with_retry(self.start_url)
-            k = pattern1(get_pure_text(q0.text))
-            pattern2(q0.text)
+            new_tasks = pattern_urls(q0.text)
             # 将列表转换为集合
-            set1 = set(self.tasks)
-            set2 = set()
-
+            set1 = set(new_tasks)
+            set2 = set(self.tasks)
             # 使用差集找出list1中有而list2中没有的元素
-            difference = set1.difference(set2)
+            difference = list(set1.difference(set2))
+            ids = [self.identifier + '_' + str(uuid.uuid4()).replace('-', '')[:8] for _ in range(len(difference))]
+            self.tasks = list(zip(ids, self.tasks))
+            self.spider_status = 'running'
+            return self.tasks
 
     def consume(self, url):
-        def pattern1(locator: str, index_0: int, p_text_list: list[str]):
+        def pattern_data(loc_str: str, start_idx: int, p_text_list: list[str]):
             # 找到两个index后面的第一个数字
             # 如果找到了相应的索引，查找该索引后的第一个看起来像是浮点数的字符串
             index_s1 = next(
-                (i for i in range(index_0, len(p_text_list)) if locator in p_text_list[i]))
+                (i for i in range(start_idx, len(p_text_list)) if loc_str in p_text_list[i]))
             index_n1 = next(
                 (i for i in range(index_s1, len(p_text_list)) if
                  re.match(r'^-?\d+(\.\d+)?$', p_text_list[i])),
@@ -160,7 +174,7 @@ class HotelSpider(BaseSpider):
             return number, index_n1
 
         # datetime pattern
-        def pattern2(p_text_list: list[str]):
+        def pattern_date(p_text_list: list[str]):
             # 正则表达式匹配 xxxx年x月
             pattern = r'(\d{4})年(\d{1,2})月'
             # 使用 next() 和生成器表达式找到第一个匹配的字符串，并提取年和月
@@ -170,30 +184,69 @@ class HotelSpider(BaseSpider):
                 return date(day=1, month=int(month), year=int(year))
             else:
                 print("Warning: No year or month")
+                return None
 
         starter = 0
-        tmp = []
+        data = []
         query = request_with_retry(url)
         txt = get_pure_text(query.text)
-        tm = pattern2(txt)
-        tmp.append(tm)
+        data.append(pattern_date(txt))
         for i in self.locs:
             # 每次更新起点index
-            n1, starter = pattern1(i, starter, txt)
-            tmp.append(n1)
-        self.data = pd.concat([self.data, pd.DataFrame([tmp], columns=self.data.columns)], ignore_index=True)
-        # 防止数据丢失，返回已提取数据做持久化
+            n1, starter = pattern_data(i, starter, txt)
+            data.append(n1)
+
+        assert len(data) == len(self.locs) + 1  # 1 for date
+
+        return data
 
     def run(self):
-        for url in tqdm(self.tasks):
-            self.consume(url)
-            print('')
+        if self.spider_status == 'stopped':
+            print('Stopped spider cannot use run, please use spider.resume() instead.')
+            return
+        try:
+            self._get_tasks()
+            try:
+                for i in range(len(self.tasks)):
+                    # task[] = [ids, url]
+                    data = self.consume(self.tasks[i][1])
+                    # 上一步不出错，下两步必然执行完成，出错了，则立即转为pkl准备排错恢复
+                    self.data.append(data)
+                    self.task_pointer = i + 1  # 表示正在执行该任务
+            except Exception as e:
+                self.dump()
+                print(
+                    f'Error occurred while processing tasks, last task is {self.data[-1]}, spider dumped with error: {e}')
+        except Exception as e:
+            print('Error in get tasks:', e)
+
+    def dump(self):
+        self.spider_status = 'stopped'
+        with open(f"{self.identifier}_dumped_{str(uuid.uuid4()).replace('-', '')[:8]}.pkl", 'wb') as file:
+            pickle.dump(self, file)
+
+    def resume(self):
+        self.spider_status = 'resume'
+        self.run()
+
+    def skip(self, num=1):
+        for i in range(num):
+            # taskpointer表示正在处理，skip掉则直接skip对应掉task，然后加一taskpointer
+            self.skipped_tasks.append(self.tasks[self.task_pointer])
+            self.task_pointer += 1
+
+    def data(self):
+        return pd.DataFrame(self.data, columns=self.pd_columns)
 
 
 # unit test
 if __name__ == '__main__':
-    database_url = "sqlite:///../data/data.sqlite"
+    database_url = "sqlite:///./data.sqlite"
     engine = create_engine(database_url)
+    query = f"select url from spd_tasks where unique_id like '%{HotelSpider.identifier}%'"
+    df = pd.read_sql_query(query, engine)
+    tasks = df['url'].tolist()
 
-    spider = HotelSpider(db=engine, has_former_task_list=False)
+    spider = HotelSpider('update', tasks)
+    # spider.run()
     spider.consume('https://tjj.sh.gov.cn/ydsj57/20231116/d474b2c8bb5647f2a4041299caad8be7.html')
