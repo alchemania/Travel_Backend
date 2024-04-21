@@ -53,7 +53,7 @@ def train(modelpath, data: pd.DataFrame):
 # unit test
 if __name__ == '__main__':
     path = '../models/modelgroup_20240420172635'
-    database_url = "sqlite:///D:/lib/Travel_ML/data/data.sqlite"
+    database_url = "sqlite:///../test.db"
     from sqlalchemy import create_engine
 
     engine = create_engine(database_url)

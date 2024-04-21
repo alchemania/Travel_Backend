@@ -52,7 +52,7 @@ class DbshHotel(models.Model):
 
 
 class DbHkVisitorsImputed(models.Model):
-    date = models.DateTimeField()
+    date = models.DateTimeField(primary_key=True)
     HK_airport_entry = models.FloatField(null=True, blank=True, db_column='HK_airport_entry')
     CN_airport_entry = models.FloatField(null=True, blank=True, db_column='CN_airport_entry')
     global_airport_entry = models.FloatField(null=True, blank=True, db_column='global_airport_entry')
@@ -67,7 +67,7 @@ class DbHkVisitorsImputed(models.Model):
 
 
 class DbSpider(models.Model):
-    unique_id = models.CharField(max_length=100, db_column='unique_id')
+    unique_id = models.CharField(max_length=100, db_column='unique_id',primary_key=True)
     url = models.CharField(max_length=1000, db_column='url')
 
     class Meta:

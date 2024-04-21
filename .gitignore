@@ -4,5 +4,4 @@ venv
 */migrations/*
 *pem
 *log
-/pipeline/data.sqlite
 /pipeline/lightning_logs/
