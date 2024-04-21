@@ -104,7 +104,7 @@ WSGI_APPLICATION = "TravelServer.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
-USE_TEST_DATABASE = True
+USE_TEST_DATABASE = False
 
 if USE_TEST_DATABASE:
     DATABASES = {
@@ -223,7 +223,7 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["file"],
-            "level": "INFO",
+            "level": "DEBUG",
             "propagate": False,
         },
     },

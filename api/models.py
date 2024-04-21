@@ -2,7 +2,7 @@ from django.db import models
 
 
 class DbShvisitorsMonthly(models.Model):
-    DATE = models.DateField(primary_key=True, db_column='date')
+    DATE = models.DateTimeField(primary_key=True, db_column='date')
     FOREIGN = models.IntegerField(db_column='global_entry')
     HM = models.IntegerField(db_column='hkmo_entry')
     TW = models.IntegerField(db_column='tw_entry')
@@ -12,7 +12,7 @@ class DbShvisitorsMonthly(models.Model):
 
 
 class DbShvisitorsDaily(models.Model):
-    DATE = models.DateField(primary_key=True, db_column='date')
+    DATE = models.DateTimeField(primary_key=True, db_column='date')
     FOREIGN = models.IntegerField(db_column='global_entry')
     HM = models.IntegerField(db_column='hkmo_entry')
     TW = models.IntegerField(db_column='tw_entry')
@@ -22,7 +22,7 @@ class DbShvisitorsDaily(models.Model):
 
 
 class DbShvisitorsDailyPredicted(models.Model):
-    DATE = models.DateField(primary_key=True, db_column='date')
+    DATE = models.DateTimeField(primary_key=True, db_column='date')
     FOREIGN = models.IntegerField(db_column='global_entry')
     HM = models.IntegerField(db_column='hkmo_entry')
     TW = models.IntegerField(db_column='tw_entry')
@@ -32,7 +32,7 @@ class DbShvisitorsDailyPredicted(models.Model):
 
 
 class DbShvisitorsBycountry(models.Model):
-    date = models.DateField(primary_key=True, db_column='date')
+    date = models.DateTimeField(primary_key=True, db_column='date')
     country = models.CharField(max_length=100)
     month_visits = models.IntegerField()
 
@@ -41,7 +41,7 @@ class DbShvisitorsBycountry(models.Model):
 
 
 class DbshHotel(models.Model):
-    DATE = models.DateField(primary_key=True, db_column='日期')
+    DATE = models.DateTimeField(primary_key=True, db_column='日期')
     avg_rent_rate = models.FloatField(db_column='平均出租率')
     avg_price = models.IntegerField(db_column='平均房价')
     avg_rent_rate_5 = models.FloatField(db_column='五星级平均出租率')

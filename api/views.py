@@ -26,7 +26,6 @@ def api_sh_visitors_all(request):
 
 
 def api_sh_visitors_sum(request, freq, year, month, day):
-    # 构建当前日期和前一年的日期
     if freq == 'y':
         current_date = datetime.date(year, 1, 1)
         current_total = DbShvisitorsDailyPredicted.objects.filter(
@@ -35,7 +34,7 @@ def api_sh_visitors_sum(request, freq, year, month, day):
     elif freq == 'm':
         if month is None:
             raise ValueError("Month is required for monthly growth calculation")
-        current_date = datetime.date(year, month, 1)
+        current_date = datetime.date(year, int(month), 1)
         current_total = DbShvisitorsDailyPredicted.objects.filter(
             DATE__year=current_date.year,
             DATE__month=current_date.month,
@@ -50,8 +49,7 @@ def api_sh_visitors_sum(request, freq, year, month, day):
             DATE__day=current_date.day
         ).aggregate(total=Sum(F('FOREIGN') + F('HM') + F('TW')))['total']
     else:
-        raise ValueError("Frequency must be 'y', 'm', or 'd'")
-
+        return JsonResponse({'error': 'Frequency must be "y", "m", or "d'"})"})
     return JsonResponse({'sum': current_total})
 
 
