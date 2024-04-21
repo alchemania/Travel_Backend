@@ -104,21 +104,31 @@ WSGI_APPLICATION = "TravelServer.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django_tidb',
-        'NAME': 'django',
-        'USER': '4JHciBfpftZR67E.root',
-        'PASSWORD': 'S6bmjfTQFTA6QT6K',
-        'HOST': 'gateway01.us-west-2.prod.aws.tidbcloud.com',
-        'PORT': 4000,
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-            'ssl_mode': 'VERIFY_IDENTITY',
-            **ca
+USE_TEST_DATABASE = True
+
+if USE_TEST_DATABASE:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'test.db'),
         }
-    },
-}
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django_tidb',
+            'NAME': 'django',
+            'USER': '4JHciBfpftZR67E.root',
+            'PASSWORD': 'S6bmjfTQFTA6QT6K',
+            'HOST': 'gateway01.us-west-2.prod.aws.tidbcloud.com',
+            'PORT': 4000,
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+                'ssl_mode': 'VERIFY_IDENTITY',
+                **ca
+            }
+        },
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators

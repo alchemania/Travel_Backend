@@ -86,7 +86,7 @@ class SHHotelSpider(BaseSpider):
     start_url = 'https://tjj.sh.gov.cn/ydsj57/index.html'
     template = 'https://tjj.sh.gov.cn/ydsj57/index_{page}.html'
 
-    def __init__(self, spider_status: Literal['new', 'update'], tasks: list = None):
+    def __init__(self, spider_status: Literal['new', 'update'], tasks):
         super().__init__()
         # need initialization
         self.tasks = tasks  # [[id,url],...]
@@ -127,6 +127,7 @@ class SHHotelSpider(BaseSpider):
             self.spider_status = 'running'
             return
         elif self.spider_status == 'new':
+            # TODO
             self.spider_status = 'fetching tasks'
             # # request num k(8+)
             q0 = request_with_retry(self.start_url)
@@ -138,9 +139,8 @@ class SHHotelSpider(BaseSpider):
                     qi = request_with_retry(self.template.format(page=i))
                     self.tasks.append(*pattern_urls(qi.text))
 
-            # 将UUID转换为字符串并去掉连字符，然后截取前8个字符
-            ids = [self.identifier + '_' + str(uuid.uuid4()).replace('-', '')[:8] for _ in range(len(self.tasks))]
-            self.tasks = zip(ids, self.tasks)
+            ids = [self.identifier + '_' + str(uuid.uuid4()).replace('-', '')[:8] for _ in range(len(difference))]
+            self.tasks = dict(zip(ids, self.tasks))
             self.spider_status = 'running'
             return self.tasks
 
@@ -151,11 +151,11 @@ class SHHotelSpider(BaseSpider):
             new_tasks = pattern_urls(q0.text)
             # 将列表转换为集合
             set1 = set(new_tasks)
-            set2 = set(self.tasks)
+            set2 = set(self.tasks.values())
             # 使用差集找出list1中有而list2中没有的元素
             difference = list(set1.difference(set2))
             ids = [self.identifier + '_' + str(uuid.uuid4()).replace('-', '')[:8] for _ in range(len(difference))]
-            self.tasks = list(zip(ids, self.tasks))
+            self.tasks = dict(zip(ids, self.tasks))
             self.spider_status = 'running'
             return self.tasks
 
@@ -210,9 +210,9 @@ class SHHotelSpider(BaseSpider):
         try:
             self._get_tasks()
             try:
-                for i in range(len(self.tasks)):
+                for i, uid, url in enumerate(self.tasks):
                     # task[] = [ids, url]
-                    data = self.consume(self.tasks[i][1])
+                    data = self.consume(url)
                     # 上一步不出错，下两步必然执行完成，出错了，则立即转为pkl准备排错恢复
                     self.data.append(data)
                     self.task_pointer = i + 1  # 表示正在执行该任务
@@ -292,7 +292,7 @@ class HKVisitorsSpider(BaseSpider):
 
         # 进行分组和聚合
         grouped = df.groupby(df['日期'].dt.date).agg(**aggregations).reset_index()
-
+        grouped.rename(columns={'日期': 'date'}, inplace=True)
         # 打印结果
         return grouped
 
@@ -300,9 +300,6 @@ class HKVisitorsSpider(BaseSpider):
         # only 1 task
         self._get_tasks()
         self.data = self.consume(self.tasks)
-
-    def data(self):
-        return self.data
 
 
 # unit test

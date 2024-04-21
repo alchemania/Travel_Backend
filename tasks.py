@@ -1,7 +1,3 @@
-import eventlet
-
-eventlet.monkey_patch()
-
 # python packages
 import os
 import re
@@ -61,16 +57,18 @@ app.conf.beat_schedule = {
 
 
 @app.task
-def auto_hotel_spider():
+def auto_hotel_spider(*args, **kwargs):
     logger.info("Starting the hotel spider task")
     try:
         tasks = DbSpider.objects.filter(unique_id__contains=SHHotelSpider.identifier).all()
-        urls = [[task.unique_id, task.url] for task in tasks]
-        spider = SHHotelSpider('update', tasks=urls)
+        tasks = read_frame(tasks).to_dict(orient='list')
+        tasks = dict(zip(tasks['unique_id'], tasks['url']))
+        spider = SHHotelSpider('update', tasks=tasks)
         spider.run()
         logger.info("Hotel spider task fetching completed successfully")
 
         if spider.tasks:
+            logger.info("Hotel spider new data fetched")
             objs = [DbSpider(unique_id=uid, url=url) for uid, url in spider.tasks]
             DbSpider.objects.bulk_create(objs, ignore_conflicts=True)
             logger.info("New spider tasks added to database")
@@ -88,20 +86,26 @@ def auto_hotel_spider():
             ]
             DbshHotel.objects.bulk_create(instances, ignore_conflicts=True)
             logger.info("Hotel data inserted into database")
+            return True
+        else:
+            logger.info("Hotel spider task no new data fetched")
+            return False
     except Exception as e:
         logger.error(f"An error occurred in the hotel spider task: {str(e)}")
 
 
 @app.task
-def auto_hkvisitors_spider():
+def auto_hkvisitors_spider(*args, **kwargs):
     logger.info("Starting the HK visitors spider task")
     try:
         spider = HKVisitorsSpider()
         spider.run()
-        data = spider.data()
-        max_date_db = DbHkVisitorsImputed.objects.aggregate(max_date=Max('date'))['max_date']
-        max_date_spd = data['date'].min()
-        if max_date_spd >= max_date_db:
+        logger.info("HK visitors spider task fetching completed successfully")
+        max_date_db = DbHkVisitorsImputed.objects.aggregate(max_date=Max('date'))['max_date'].date()
+        max_date_spd = spider.data['date'].max()
+        if max_date_spd > max_date_db or max_date_db is None:
+            logger.info("HK visitors spider new data fetched")
+            data = spider.data[spider.data['date'] > max_date_db]
             instances = [
                 DbHkVisitorsImputed(
                     date=row['date'],
@@ -118,12 +122,16 @@ def auto_hkvisitors_spider():
             ]
             DbHkVisitorsImputed.objects.bulk_create(instances, ignore_conflicts=True)
             logger.info("HK visitors data updated in database")
+            return True
+        else:
+            logger.info("HK visitors spider no new data fetched")
+            return False
     except Exception as e:
         logger.error(f"An error occurred in the HK visitors spider task: {str(e)}")
 
 
 @app.task
-def latest_model(directory):
+def latest_model(directory, *args, **kwargs):
     logger.info("Searching for the latest model directory")
     max_num = -1
     max_folder = None
@@ -146,13 +154,13 @@ def latest_model(directory):
 
 
 @app.task
-def autotrain():
+def autotrain(*args, **kwargs):
     logger.info("Starting auto-training task")
     try:
         base_dir = os.path.join(settings.BASE_DIR, 'models')
         model_dir = latest_model(base_dir)
         db_data = DbShvisitorsDaily.objects.all()
-        dataset = melt(cut(read_frame(db_data)))
+        dataset = melt(cut(read_frame(db_data, index_col='DATE')))
         train(model_dir, dataset)
         logger.info("Model training completed successfully")
     except Exception as e:
@@ -160,13 +168,13 @@ def autotrain():
 
 
 @app.task
-def autopredict():
+def autopredict(*args, **kwargs):
     logger.info("Starting auto-prediction task")
     try:
         base_dir = os.path.join(settings.BASE_DIR, 'models')
         model_dir = latest_model(base_dir)
         db_data = DbShvisitorsDaily.objects.all()
-        dataset = melt(cut(read_frame(db_data)))
+        dataset = melt(cut(read_frame(db_data, index_col='DATE')))
         pred = predict(model_dir, dataset, 'AutoPatchTST')
         instances = [
             DbShvisitorsDailyPredicted(
@@ -184,13 +192,25 @@ def autopredict():
 
 
 @app.task
-def pipeline():
+def pipeline(*args, **kwargs):
+    """
+    To start the pipeline task
+    1. celery -A tasks worker --loglevel=info -P gevent 启动worker
+    2. celery -A tasks beats --loglevel=info 启动定时任务
+    3. celery -A tasks flower 启动flower面板
+    """
     logger.info("Starting pipeline task")
     try:
-        fetch_data = group(auto_hotel_spider, auto_hkvisitors_spider)
-        renew_model = autopredict | autotrain
-        workflow = fetch_data | renew_model
+        parallel = group(auto_hotel_spider.s(), auto_hkvisitors_spider.s())
+        sync = chain(autotrain.s(), autopredict.s())
+        workflow = chain(parallel, sync)
         workflow.apply_async()
         logger.info("Pipeline task execution triggered")
     except Exception as e:
         logger.error(f"An error occurred in the pipeline task: {str(e)}")
+
+# if __name__ == '__main__':
+# auto_hotel_spider()
+# auto_hkvisitors_spider()
+# autotrain()
+# autopredict()
