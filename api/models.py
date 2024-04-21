@@ -49,3 +49,26 @@ class DbshHotel(models.Model):
 
     class Meta:
         db_table = 'sh_hotel'
+
+
+class DbHkVisitorsImputed(models.Model):
+    date = models.DateTimeField()
+    HK_airport_entry = models.FloatField(null=True, blank=True, db_column='HK_airport_entry')
+    CN_airport_entry = models.FloatField(null=True, blank=True, db_column='CN_airport_entry')
+    global_airport_entry = models.FloatField(null=True, blank=True, db_column='global_airport_entry')
+    airport_entry = models.FloatField(null=True, blank=True, db_column='airport_entry')
+    HK_airport_departure = models.FloatField(null=True, blank=True, db_column='HK_airport_departure')
+    CN_airport_departure = models.FloatField(null=True, blank=True, db_column='CN_airport_departure')
+    global_airport_departure = models.FloatField(null=True, blank=True, db_column='global_airport_departure')
+    airport_departure = models.FloatField(null=True, blank=True, db_column='airport_departure')
+
+    class Meta:
+        db_table = 'hk_visitors_imputed'
+
+
+class DbSpider(models.Model):
+    unique_id = models.CharField(max_length=100, db_column='unique_id')
+    url = models.CharField(max_length=1000, db_column='url')
+
+    class Meta:
+        db_table = 'spd_tasks'

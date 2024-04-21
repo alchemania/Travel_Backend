@@ -89,7 +89,7 @@ class SHHotelSpider(BaseSpider):
     def __init__(self, spider_status: Literal['new', 'update'], tasks: list = None):
         super().__init__()
         # need initialization
-        self.tasks = tasks
+        self.tasks = tasks  # [[id,url],...]
         self.spider_status = spider_status  # new, update, resume, fetching tasks, stopped
         self.data = []
         self.task_pointer = 0  # 关键数据，spider排错的关键
@@ -247,6 +247,7 @@ class HKVisitorsSpider(BaseSpider):
         super().__init__()
         self.tasks = []
         self.data = None
+        self.db_table = ''
 
     def _get_tasks(self):
         self.tasks = 'https://www.immd.gov.hk/opendata/hkt/transport/immigration_clearance/statistics_on_daily_passenger_traffic.csv'
@@ -300,18 +301,21 @@ class HKVisitorsSpider(BaseSpider):
         self._get_tasks()
         self.data = self.consume(self.tasks)
 
+    def data(self):
+        return self.data
+
 
 # unit test
 if __name__ == '__main__':
-    # database_url = "sqlite:///./data.sqlite"
-    # engine = create_engine(database_url)
-    # query = f"select url from spd_tasks where unique_id like '%{SHHotelSpider.identifier}%'"
-    # df = pd.read_sql_query(query, engine)
-    # tasks = df['url'].tolist()
-    #
-    # spider = SHHotelSpider('update', tasks)
-    # # spider.run()
-    # spider.consume('https://tjj.sh.gov.cn/ydsj57/20231116/d474b2c8bb5647f2a4041299caad8be7.html')
+    database_url = "sqlite:///./data.sqlite"
+    engine = create_engine(database_url)
+    query = f"select url from spd_tasks where unique_id like '%{SHHotelSpider.identifier}%'"
+    df = pd.read_sql_query(query, engine)
+    tasks = df['url'].tolist()
+
+    spider = SHHotelSpider('update', tasks)
+    # spider.run()
+    spider.consume('https://tjj.sh.gov.cn/ydsj57/20231116/d474b2c8bb5647f2a4041299caad8be7.html')
 
     spider = HKVisitorsSpider()
     spider.run()
