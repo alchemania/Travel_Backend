@@ -32,7 +32,15 @@ def plot_time_series(df, title='Time Series Data', xlabel='Date', ylabel='Value'
 # melt and pivot are all implemented by django_pandas
 
 def melt(df):
-    pass
+    if 'date' not in df.columns:
+        df = df.reset_index(names='date')
+        df_ori = pd.melt(df, id_vars=['date'], var_name='unique_id', value_name='y')
+        df_ori.rename(columns={'date': 'ds'}, inplace=True)
+        return df_ori
+    else:
+        df_ori = pd.melt(df, id_vars=['date'], var_name='unique_id', value_name='y')
+        df_ori.rename(columns={'date': 'ds'}, inplace=True)
+        return df_ori
 
 
 # melt and pivot are all implemented by django_pandas
@@ -46,20 +54,20 @@ def impute(df):
     pass
 
 
-def interpolation(df_sh, df_hk, noise: float = 0.1):
+def interpolation(sh_ori, hk_ori, noise: float = 0.1):
     regular_slice_start = '2011-01-01'
     regular_slice_end = '2019-12-31'
     special_slice_start = '2020-01-01'
-    hk_regular_slice = df_hk[:regular_slice_end]
-    hk_special_slice = df_hk[special_slice_start:]
+    hk_regular_slice = hk_ori[:regular_slice_end]
+    hk_special_slice = hk_ori[special_slice_start:]
     frames = []  # 存储每年DataFrame的列表
 
     # 生成到最后一个月最后一天的完整日期范围，避免最后一个月没有值
-    full_date_range = pd.date_range(start=df_sh.index.min(),
-                                    end=df_sh.index.max().to_period('M').to_timestamp('M'), freq='D')
+    full_date_range = pd.date_range(start=sh_ori.index.min(),
+                                    end=sh_ori.index.max().to_period('M').to_timestamp('M'), freq='D')
 
     # 重采样并前向填充
-    sh_daily_fake = df_sh.reindex(full_date_range).ffill()
+    sh_daily_fake = sh_ori.reindex(full_date_range).ffill()
 
     # hk only 2019 -> 2011~2019
     for year in range(datetime.date.fromisoformat(regular_slice_start).year,
@@ -96,8 +104,19 @@ def interpolation(df_sh, df_hk, noise: float = 0.1):
     return sh_daily_interpolated
 
 
+def cut(df, start_date='2020-01-01', end_date='2023-06-01'):
+    # 使用布尔索引选择不在指定范围内的数据
+    df = df.loc[(df.index < start_date) | (df.index > end_date)].sort_index()
+    # 创建一个递减的日期索引
+    new_index = pd.date_range(end=df.index.max(), periods=len(df))
+    # 将新的日期索引应用到数据框架
+    df.set_index(new_index, inplace=True)
+    # 使用布尔索引选择不在指定范围内的数据
+    return df
+
+
+# unit test
 if __name__ == '__main__':
-    # 创建数据库引擎
     database_url = "sqlite:///D:/lib/Travel_ML/data/data.sqlite"
     engine = create_engine(database_url)
 
@@ -106,4 +125,5 @@ if __name__ == '__main__':
     imputed_data_query = f"SELECT * FROM sh_visitors"
     df_sh = pd.read_sql_query(imputed_data_query, engine, index_col='date', parse_dates=['date'])
     sh_daily = interpolation(df_sh, df_hk, noise=0.1)
-    plot_time_series(sh_daily)
+    p = melt(sh_daily)
+    print(p)
