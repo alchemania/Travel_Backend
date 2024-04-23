@@ -14,7 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, re_path
+from django.urls import path
 from django.views.generic import TemplateView
 
 import api.views
@@ -33,6 +33,7 @@ urlpatterns = [
     path("api/data/sh/hotel/yoy/<str:freq>/<int:year>/<int:month>/<int:day>", api.views.api_sh_hotel_yoy,
          name="api_hotel_rate"),
 
+    path("api/data/sh/stats", api.views.api_sh_datastats),
     path("api/data/sh/visitorsbycountry/stats", api.views.api_sh_visitors_by_country_statistics),
 
     path("api/maintain/trigger/<str:module>", api.views.api_maintain_trigger),

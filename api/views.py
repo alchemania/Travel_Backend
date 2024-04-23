@@ -1,7 +1,10 @@
 import datetime
 
+import numpy as np
 import requests
-from django.db.models import Sum, Min, F
+from django.db.models import Sum, Min, F, Avg, ExpressionWrapper
+from django.db.models.functions import ExtractYear, ExtractMonth
+from django.forms import FloatField, IntegerField
 from django.http import JsonResponse
 
 from api.models import DbShvisitorsMonthly, DbShHotel, DbShvisitorsBycountry, DbShvisitorsDaily, \
@@ -132,20 +135,11 @@ def api_sh_hotel_rawdata(request, freq, ys, ms, ds, ye, me, de):
 
 
 # 其实这个是预测api，但是预测的数据已经放入数据库，所以直接查询
+# TODO: rebuild this api
 def api_sh_hotel_yoy(request, freq, year, month, day):
     today = datetime.datetime.today()
     # rate = DbshHotel.objects.filter(DATE__year=today.year, DATE__month=today.month).first().avg_rent_rate
     return JsonResponse({'per': 31})
-
-
-# 废弃api
-def api_weather(request):
-    city_code = '310000'
-    key = '66ca50b578c7a66cc0fd79dcb48f096a'
-    url = f'https://restapi.amap.com/v3/weather/weatherInfo?city={city_code}&key={key}'
-    wdata = requests.get(url=url).json()
-    tmp = wdata["lives"][0]
-    return JsonResponse({'data': 'this api has been aborted.'})
 
 
 # 返回国家排名
@@ -179,6 +173,90 @@ def api_sh_visitors_by_country_statistics(request):
 
     res = sorted(results, key=lambda x: x['cur_num'], reverse=True)  # 排序并逆序，最高的排最前
     return JsonResponse(res, safe=False)
+
+
+def api_sh_datastats(request):
+    """
+    定义今年相较去年热度
+    1. 远小于=-2 -30%
+    2. 小于=-1 -30%～-10%
+    3  略小于
+    3. 相差不大=0
+    4. 略大于
+    5. 大于
+    6. 远大于
+    """
+
+    def mapper(percentage: float) -> int:
+        if percentage < -0.3:
+            return -3
+        elif -0.3 <= percentage < -0.15:
+            return -2
+        elif -0.15 <= percentage < 0.05:
+            return -1
+        elif -0.05 <= percentage < 0.05:
+            return 0
+        elif 0.05 <= percentage < 0.15:
+            return 1
+        elif 0.15 <= percentage < 0.3:
+            return 2
+        elif 0.3 <= percentage:
+            return 3
+
+    # 01
+    today = datetime.datetime.now()
+    percentage_increment = 0.1
+    total_visits_cur_y = DbShvisitorsDailyPredicted.objects.filter(
+        DATE__gte=datetime.date(today.year, 1, 1),
+        DATE__lte=datetime.date(today.year, today.month, today.day)
+    ).aggregate(total=Sum(F('FOREIGN') + F('HM') + F('TW')))['total']
+
+    total_visits_prev_y = DbShvisitorsDailyPredicted.objects.filter(
+        DATE__gte=datetime.date(today.year - 1, 1, 1),
+        DATE__lte=datetime.date(today.year - 1, today.month, today.day)
+    ).aggregate(total=Sum(F('FOREIGN') + F('HM') + F('TW')))['total']
+
+    hot_year = mapper((total_visits_cur_y - total_visits_prev_y) / total_visits_prev_y)
+
+    # 02
+    total_visits_monthly = DbShvisitorsDailyPredicted.objects.filter(DATE__year=today.year).annotate(
+        year=ExtractYear('DATE'),
+        month=ExtractMonth('DATE')
+    ).values('year', 'month').annotate(
+        total_foreign=Sum('FOREIGN'),
+        total_hm=Sum('HM'),
+        total_tw=Sum('TW'),
+        total_all=Sum(F('FOREIGN') + F('HM') + F('TW'))
+    ).order_by('year', 'month')
+
+    total_visits_monthly_dict = read_frame(total_visits_monthly).to_dict(orient='list')
+
+    hot_month = mapper((total_visits_monthly_dict['total_all'][today.month - 1] /
+                        np.average(total_visits_monthly_dict['total_all']) - 1))
+
+    # 02
+    recent_average = DbShvisitorsDailyPredicted.objects.filter(
+        DATE__gte=today.date(),
+        DATE__lt=datetime.date(today.year, today.month + 1, today.day)
+    ).order_by('-DATE')[:30].aggregate(
+        total=Avg(F('FOREIGN') + F('HM') + F('TW'))
+    )['total']
+    # 定义高峰阈值，即平均值的指定百分比以上
+    threshold = recent_average * (1 + percentage_increment)
+    # 找出第一个超过这个阈值的日子
+    next_peak_day = DbShvisitorsDailyPredicted.objects.filter(
+        DATE__gt=today.date(),
+    ).values('DATE').annotate(
+        total_entry=Sum(F('FOREIGN') + F('HM') + F('TW'))
+    ).filter(
+        total_entry__gt=threshold
+    ).order_by('DATE').first()
+
+    return JsonResponse({
+        'peak_day': next_peak_day['DATE'].strftime('%Y-%m-%d'),
+        'hot_year': hot_year,
+        'hot_month': hot_month
+    })
 
 
 def api_maintain_trigger(request, module):
