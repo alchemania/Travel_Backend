@@ -6,6 +6,7 @@ from django.http import JsonResponse
 
 from api.models import DbShvisitorsMonthly, DbshHotel, DbShvisitorsBycountry, DbShvisitorsDaily, \
     DbShvisitorsDailyPredicted
+from tasks import *
 
 
 def api_sh_visitors_all(request):
@@ -181,3 +182,20 @@ def api_country_rate(request):
 
     res = sorted(results, key=lambda x: x['cur_num'], reverse=True)  # 排序并逆序，最高的排最前
     return JsonResponse(res, safe=False)
+
+
+def api_maintain_trigger(request, module):
+    activity = {
+        "parallel_spiders": auto_parallel_spiders.delay(),
+        "hkvisitors": auto_hkvisitors_spider.delay(),
+        "hotel": auto_hotel_spider.delay(),
+        "shvisitors": auto_shvisitors_spider.delay(),
+        "train": autopredict.delay(),
+        "predict": autopredict.delay(),
+        "model_renewal": auto_model_renewal.delay(),
+    }
+
+    if module in activity:
+        return JsonResponse({'status': 'success', 'msg': f'{module} triggered successfully'})
+    else:
+        return JsonResponse({'status': 'failed', 'msg': f'{module} triggered failed'})

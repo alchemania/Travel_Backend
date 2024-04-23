@@ -18,15 +18,12 @@ from django.urls import path, re_path
 from django.views.generic import TemplateView
 
 import api.views
-import ml.views
 
 urlpatterns = [
     path("admin", admin.site.urls),
     path("api/data/sh/visitors/all", api.views.api_sh_visitors_all),
-
     path('api/data/sh/visitors/sum/<str:freq>/<int:year>/<int:month>/<int:day>', api.views.api_sh_visitors_sum,
          name='api-sh-visitors-sum'),
-
     path('api/data/sh/visitors/yoy/<str:freq>/<int:year>/<int:month>/<int:day>', api.views.api_sh_visitors_yoy,
          name='api-sh-visitors-yoy'),
 
@@ -35,11 +32,7 @@ urlpatterns = [
 
     path("api/data/country/rate", api.views.api_country_rate),
 
-    path("ml/train/re", ml.views.ml_re_train),
-    path("ml/pred/re", ml.views.ml_re_pred),
-    path("ml/pred/is", ml.views.ml_forecast_insight),
-    path("ml/paras", ml.views.ml_adjust_paras),
-    path("ml/all", ml.views.ml_get_all),
+    path("api/maintain/trigger/<str:module>", api.views.api_maintain_trigger),
 
     path('', TemplateView.as_view(template_name='index.html'))
 ]

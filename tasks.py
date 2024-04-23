@@ -131,6 +131,19 @@ def auto_hkvisitors_spider(*args, **kwargs):
 
 
 @app.task
+def auto_shvisitors_spider(*args, **kwargs):
+    pass
+
+
+@app.task
+def auto_parallel_spiders(*args, **kwargs):
+    logger.info("Starting the parallel spider task")
+    parallel = group(auto_hotel_spider.s(), auto_hkvisitors_spider.s(), auto_shvisitors_spider.s())
+    parallel.apply_async()
+    logger.info("Parallel spider task fetching completed successfully")
+
+
+@app.task
 def latest_model(directory, *args, **kwargs):
     logger.info("Searching for the latest model directory")
     max_num = -1
@@ -192,6 +205,14 @@ def autopredict(*args, **kwargs):
 
 
 @app.task
+def auto_model_renewal(*args, **kwargs):
+    logger.info("Starting auto-renewal task")
+    sync = chain(autotrain.s(), autopredict.s())
+    sync.apply_async()
+    logger.info("Auto-renewal task completed successfully")
+
+
+@app.task
 def pipeline(*args, **kwargs):
     """
     To start the pipeline task
@@ -201,9 +222,7 @@ def pipeline(*args, **kwargs):
     """
     logger.info("Starting pipeline task")
     try:
-        parallel = group(auto_hotel_spider.s(), auto_hkvisitors_spider.s())
-        sync = chain(autotrain.s(), autopredict.s())
-        workflow = chain(parallel, sync)
+        workflow = chain(auto_parallel_spiders.s(), auto_model_renewal.s())
         workflow.apply_async()
         logger.info("Pipeline task execution triggered")
     except Exception as e:
