@@ -9,21 +9,22 @@ from api.models import DbShvisitorsMonthly, DbShHotel, DbShvisitorsBycountry, Db
 from tasks import *
 
 
-def api_sh_visitors_all(request):
-    data = DbShvisitorsMonthly.objects.all()
-    res = {
-        "timeline": [],
-        "frn": [],
-        "hk_mw": [],
-        "tw": []
-    }
-    # 对每一项数据重命名
-    for i in data:
-        res['timeline'].append(str(i.DATE))
-        res['frn'].append(i.FOREIGN)
-        res['hk_mw'].append(i.HM)
-        res['tw'].append(i.TW)
-    return JsonResponse(res)
+def api_sh_visitors_rawdata(request, freq, ys, ms, ds, ye, me, de):
+    start_date = datetime.date(ys, ms, ds)
+    end_date = datetime.date(ye, me, de)
+    if freq == 'm':
+        data = DbShvisitorsMonthly.objects.filter(
+            DATE__gte=start_date, DATE__lte=end_date
+        )
+    elif freq == 'd':
+        data = DbShvisitorsDailyPredicted.objects.filter(
+            DATE__gte=start_date, DATE__lte=end_date
+        )
+    else:
+        return JsonResponse({'error': 'freq must be "m" or "d"'})
+    dct = read_frame(data).to_dict(orient='list')
+    dct['DATE'] = list(map(lambda x: datetime.datetime.strftime(x, '%Y-%m-%d'), dct['DATE']))
+    return JsonResponse(dct, safe=False)
 
 
 def api_sh_visitors_sum(request, freq, year, month, day):
@@ -114,28 +115,24 @@ def api_sh_visitors_yoy(request, freq, year, month, day):
     return JsonResponse({'per': round(growth, 2)})
 
 
-# 查询酒店的所有数据
-def api_hotel_all(request):
-    data = DbShHotel.objects.all()
-    res = {
-        "timeline": [],
-        "ap": [],
-        "ap5": [],
-        "ar": [],
-        "ar5": []
-    }
-    # 改名称
-    for i in data:
-        res['timeline'].append(str(i.DATE))
-        res['ap'].append(i.avg_price)
-        res['ap5'].append(i.avg_price_5)
-        res['ar'].append(i.avg_rent_rate)
-        res['ar5'].append(i.avg_rent_rate_5)
-    return JsonResponse(res)
+def api_sh_hotel_rawdata(request, freq, ys, ms, ds, ye, me, de):
+    start_date = datetime.date(ys, ms, ds)
+    end_date = datetime.date(ye, me, de)
+    if freq == 'm':
+        data = DbShHotel.objects.filter(
+            DATE__gte=start_date, DATE__lte=end_date
+        )
+    elif freq == 'd':
+        return JsonResponse({'error': 'No d frequency in this table'})
+    else:
+        return JsonResponse({'error': 'freq must be "m" or "d"'})
+    dct = read_frame(data).to_dict(orient='list')
+    dct['DATE'] = list(map(lambda x: datetime.datetime.strftime(x, '%Y-%m-%d'), dct['DATE']))
+    return JsonResponse(dct, safe=False)
 
 
 # 其实这个是预测api，但是预测的数据已经放入数据库，所以直接查询
-def api_hotel_rate(request):
+def api_sh_hotel_yoy(request, freq, year, month, day):
     today = datetime.datetime.today()
     # rate = DbshHotel.objects.filter(DATE__year=today.year, DATE__month=today.month).first().avg_rent_rate
     return JsonResponse({'per': 31})
@@ -152,7 +149,7 @@ def api_weather(request):
 
 
 # 返回国家排名
-def api_country_rate(request):
+def api_sh_visitors_by_country_statistics(request):
     # 计算每个国家的总入境人数
     total_visits = DbShvisitorsBycountry.objects.values('country').annotate(all_num=Sum('month_visits'))
 

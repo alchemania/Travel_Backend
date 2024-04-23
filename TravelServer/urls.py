@@ -21,16 +21,19 @@ import api.views
 
 urlpatterns = [
     path("admin", admin.site.urls),
-    path("api/data/sh/visitors/all", api.views.api_sh_visitors_all),
+    path("api/data/sh/visitors/raw/<str:freq>/<int:ys>-<int:ms>-<int:ds>/<int:ye>-<int:me>-<int:de>",
+         api.views.api_sh_visitors_rawdata, name="api_sh_visitors_all"),
     path('api/data/sh/visitors/sum/<str:freq>/<int:year>/<int:month>/<int:day>', api.views.api_sh_visitors_sum,
          name='api-sh-visitors-sum'),
     path('api/data/sh/visitors/yoy/<str:freq>/<int:year>/<int:month>/<int:day>', api.views.api_sh_visitors_yoy,
          name='api-sh-visitors-yoy'),
 
-    path("api/data/hotel/all", api.views.api_hotel_all),
-    path("api/data/hotel/per", api.views.api_hotel_rate),
+    path("api/data/sh/hotel/raw/<str:freq>/<int:ys>-<int:ms>-<int:ds>/<int:ye>-<int:me>-<int:de>",
+         api.views.api_sh_hotel_rawdata, name="api_sh_hotel_all"),
+    path("api/data/sh/hotel/yoy/<str:freq>/<int:year>/<int:month>/<int:day>", api.views.api_sh_hotel_yoy,
+         name="api_hotel_rate"),
 
-    path("api/data/country/rate", api.views.api_country_rate),
+    path("api/data/sh/visitorsbycountry/stats", api.views.api_sh_visitors_by_country_statistics),
 
     path("api/maintain/trigger/<str:module>", api.views.api_maintain_trigger),
 
