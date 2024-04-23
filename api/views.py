@@ -4,7 +4,7 @@ import requests
 from django.db.models import Sum, Min, F
 from django.http import JsonResponse
 
-from api.models import DbShvisitorsMonthly, DbshHotel, DbShvisitorsBycountry, DbShvisitorsDaily, \
+from api.models import DbShvisitorsMonthly, DbShHotel, DbShvisitorsBycountry, DbShvisitorsDaily, \
     DbShvisitorsDailyPredicted
 from tasks import *
 
@@ -116,7 +116,7 @@ def api_sh_visitors_yoy(request, freq, year, month, day):
 
 # 查询酒店的所有数据
 def api_hotel_all(request):
-    data = DbshHotel.objects.all()
+    data = DbShHotel.objects.all()
     res = {
         "timeline": [],
         "ap": [],

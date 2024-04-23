@@ -75,7 +75,7 @@ def auto_hotel_spider(*args, **kwargs):
 
             data = spider.data()
             instances = [
-                DbshHotel(
+                DbShHotel(
                     date=row[SHHotelSpider.pd_columns[0]],
                     avg_rent_rate=row[SHHotelSpider.pd_columns[1]],
                     avg_rent_rate_5=row[SHHotelSpider.pd_columns[2]],
@@ -84,7 +84,7 @@ def auto_hotel_spider(*args, **kwargs):
                 )
                 for index, row in data.iterrows()
             ]
-            DbshHotel.objects.bulk_create(instances, ignore_conflicts=True)
+            DbShHotel.objects.bulk_create(instances, ignore_conflicts=True)
             logger.info("Hotel data inserted into database")
             return True
         else:

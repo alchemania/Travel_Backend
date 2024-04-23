@@ -40,7 +40,7 @@ class DbShvisitorsBycountry(models.Model):
         db_table = 'sh_visitors_bycountry'
 
 
-class DbshHotel(models.Model):
+class DbShHotel(models.Model):
     DATE = models.DateTimeField(primary_key=True, db_column='日期')
     avg_rent_rate = models.FloatField(db_column='平均出租率')
     avg_price = models.IntegerField(db_column='平均房价')
