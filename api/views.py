@@ -4,12 +4,13 @@ from django.db.models import Sum, Min, F, Avg, ExpressionWrapper
 from django.db.models.functions import ExtractYear, ExtractMonth
 from django.http import JsonResponse
 from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_headers
 
 from api.models import *
 from tasks import *
 
 
-@cache_page(timeout=60 * 60 * 2)  # l3
+@cache_page(timeout=60 * 5)  # l3
 def api_sh_visitors_rawdata(request, freq, ys, ms, ds, ye, me, de):
     start_date = datetime.date(ys, ms, ds)
     end_date = datetime.date(ye, me, de)
@@ -25,7 +26,7 @@ def api_sh_visitors_rawdata(request, freq, ys, ms, ds, ye, me, de):
         return JsonResponse({'error': 'freq must be "m" or "d"'})
     dct = read_frame(data).to_dict(orient='list')
     dct['DATE'] = list(map(lambda x: datetime.datetime.strftime(x, '%Y-%m-%d'), dct['DATE']))
-    return JsonResponse(dct, safe=False)
+    return JsonResponse(dct)
 
 
 @cache_page(timeout=60 * 5)  # l1
@@ -118,7 +119,7 @@ def api_sh_visitors_yoy(request, freq, year, month, day):
     return JsonResponse({'per': round(growth, 2)})
 
 
-@cache_page(timeout=60 * 60 * 2)  # l3
+@cache_page(timeout=60 * 5)  # l3
 def api_sh_hotel_rawdata(request, freq, ys, ms, ds, ye, me, de):
     start_date = datetime.date(ys, ms, ds)
     end_date = datetime.date(ye, me, de)
@@ -132,7 +133,7 @@ def api_sh_hotel_rawdata(request, freq, ys, ms, ds, ye, me, de):
         return JsonResponse({'error': 'freq must be "m" or "d"'})
     dct = read_frame(data).to_dict(orient='list')
     dct['DATE'] = list(map(lambda x: datetime.datetime.strftime(x, '%Y-%m-%d'), dct['DATE']))
-    return JsonResponse(dct, safe=False)
+    return JsonResponse(dct)
 
 
 @cache_page(timeout=60 * 5)  # l1
