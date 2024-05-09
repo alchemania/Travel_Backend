@@ -3,11 +3,13 @@ import datetime
 from django.db.models import Sum, Min, F, Avg, ExpressionWrapper
 from django.db.models.functions import ExtractYear, ExtractMonth
 from django.http import JsonResponse
+from django.views.decorators.cache import cache_page
 
 from api.models import *
 from tasks import *
 
 
+@cache_page(timeout=60 * 60 * 2)  # l3
 def api_sh_visitors_rawdata(request, freq, ys, ms, ds, ye, me, de):
     start_date = datetime.date(ys, ms, ds)
     end_date = datetime.date(ye, me, de)
@@ -26,6 +28,7 @@ def api_sh_visitors_rawdata(request, freq, ys, ms, ds, ye, me, de):
     return JsonResponse(dct, safe=False)
 
 
+@cache_page(timeout=60 * 5)  # l1
 def api_sh_visitors_sum(request, freq, year, month, day):
     if freq == 'y':
         current_date = datetime.date(year, 1, 1)
@@ -54,6 +57,7 @@ def api_sh_visitors_sum(request, freq, year, month, day):
     return JsonResponse({'sum': current_total})
 
 
+@cache_page(timeout=60 * 5)  # l1
 def api_sh_visitors_yoy(request, freq, year, month, day):
     # 构建当前日期和前一年的日期
     if freq == 'y':
@@ -114,6 +118,7 @@ def api_sh_visitors_yoy(request, freq, year, month, day):
     return JsonResponse({'per': round(growth, 2)})
 
 
+@cache_page(timeout=60 * 60 * 2)  # l3
 def api_sh_hotel_rawdata(request, freq, ys, ms, ds, ye, me, de):
     start_date = datetime.date(ys, ms, ds)
     end_date = datetime.date(ye, me, de)
@@ -130,6 +135,7 @@ def api_sh_hotel_rawdata(request, freq, ys, ms, ds, ye, me, de):
     return JsonResponse(dct, safe=False)
 
 
+@cache_page(timeout=60 * 5)  # l1
 # 其实这个是预测api，但是预测的数据已经放入数据库，所以直接查询
 def api_sh_hotel_yoy(request, freq, year, month, day):
     today = datetime.datetime.today()
@@ -137,7 +143,7 @@ def api_sh_hotel_yoy(request, freq, year, month, day):
     return JsonResponse({'per': rate})
 
 
-# 返回国家排名
+@cache_page(timeout=60 * 30)  # l2
 def api_sh_visitors_by_country_statistics(request):
     # 计算每个国家的总入境人数
     total_visits = DbShvisitorsBycountry.objects.values('country').annotate(all_num=Sum('month_visits'))
@@ -170,6 +176,7 @@ def api_sh_visitors_by_country_statistics(request):
     return JsonResponse(res, safe=False)
 
 
+@cache_page(timeout=60 * 5)  # l1
 def api_sh_datastats(request):
     """
     定义今年相较去年热度
@@ -254,6 +261,7 @@ def api_sh_datastats(request):
     })
 
 
+# @ no cache
 def api_maintain_trigger(request, module):
     activity = {
         "parallel_spiders": auto_parallel_spiders.delay(),
