@@ -10,15 +10,6 @@ from api.models import *
 from tasks import *
 
 
-
-def wsSucessResponse(msg):
-    return {'success': msg}
-
-
-def wsFailureResponse(msg):
-    return {'failure': msg}
-
-
 @cache_page(timeout=60 * 5)  # l3
 def api_sh_visitors_rawdata(request, freq, ys, ms, ds, ye, me, de):
     start_date = datetime.date(ys, ms, ds)

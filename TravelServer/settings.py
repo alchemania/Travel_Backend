@@ -45,7 +45,7 @@ else:
     ca = {}
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -85,7 +85,7 @@ ROOT_URLCONF = "TravelServer.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'templates/dist']
+        "DIRS": [BASE_DIR / 'templates']
         ,
         "APP_DIRS": True,
         "OPTIONS": {
