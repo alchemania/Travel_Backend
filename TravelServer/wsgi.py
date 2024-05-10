@@ -16,14 +16,15 @@ from TravelServer.settings import BASE_DIR
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "TravelServer.settings")
 application = get_wsgi_application()
 application = WhiteNoise(application, root=os.path.join(BASE_DIR, 'templates/dist'))
-
-import socketio
-from api.views import ws
-
+#
+# import socketio
+# from api.views import ws
+#
 # ws = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
-application = socketio.Middleware(ws, application)
-
-import eventlet
-import eventlet.wsgi
-
-eventlet.wsgi.server(eventlet.listen(('', 8000)), application)
+# # ws = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
+# application = socketio.Middleware(ws, application)
+#
+# import eventlet
+# import eventlet.wsgi
+#
+# eventlet.wsgi.server(eventlet.listen(('', 8000)), application)
