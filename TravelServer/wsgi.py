@@ -11,13 +11,15 @@ import os
 from django.core.wsgi import get_wsgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "TravelServer.settings")
-
 application = get_wsgi_application()
 
-from api.views import ws
 import socketio
+from api.views import ws
 
-application = socketio.WSGIApp(ws, application)
-from gevent import pywsgi
+# ws = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
+application = socketio.Middleware(ws, application)
 
-pywsgi.WSGIServer(('', 8000), application).serve_forever()
+import eventlet
+import eventlet.wsgi
+
+eventlet.wsgi.server(eventlet.listen(('', 8000)), application)

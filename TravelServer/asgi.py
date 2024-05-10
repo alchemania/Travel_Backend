@@ -64,4 +64,5 @@ def auth(sid, msg: str):
         return wsFailureResponse("Authentication failed")
     return wsSucessResponse(str(uuid.uuid4()))
 
+# Django can only handle ASGI/HTTP connections, not lifespan.
 # uvicorn TravelServer.asgi:application --host 127.0.0.1 --port 8000

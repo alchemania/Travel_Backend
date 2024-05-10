@@ -1,6 +1,12 @@
 import datetime
+import json
 
 import socketio
+import shlex
+import uuid
+
+from asgiref.sync import sync_to_async
+from django.contrib.auth import authenticate
 from django.db.models import Sum, Min, F, Avg, ExpressionWrapper
 from django.db.models.functions import ExtractYear, ExtractMonth
 from django.http import JsonResponse
@@ -8,6 +14,47 @@ from django.views.decorators.cache import cache_page
 
 from api.models import *
 from tasks import *
+
+ws = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
+
+
+def wsSucessResponse(msg):
+    resp = {
+        'status': 'success',
+        'msg': msg
+    }
+    return json.dumps(resp)
+
+
+def wsFailureResponse(msg):
+    resp = {
+        'status': 'error',
+        'msg': msg
+    }
+    return json.dumps(resp)
+
+
+@ws.event
+def ping(sid, msg):
+    return wsSucessResponse("pong!")
+
+
+@ws.event
+def task(sid, msg):
+    print("sid:", sid, "msg", msg)
+    return wsSucessResponse(msg)
+
+
+@ws.event
+def auth(sid, msg: str):
+    args = shlex.split(msg)[1:]
+    if len(args) != 2:
+        return wsFailureResponse("Format Error: auth usr psw")
+    usr, psw = args
+    user = authenticate(username=usr, password=psw)
+    if user is None:
+        return wsFailureResponse("Authentication failed")
+    return wsSucessResponse(str(uuid.uuid4()))
 
 
 @cache_page(timeout=60 * 5)  # l3
