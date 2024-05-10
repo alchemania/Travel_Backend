@@ -143,8 +143,7 @@ def auto_parallel_spiders(*args, **kwargs):
     logger.info("Parallel spider task fetching completed successfully")
 
 
-@app.task
-def latest_model(directory, *args, **kwargs):
+def _get_latest_model(directory, *args, **kwargs):
     logger.info("Searching for the latest model directory")
     max_num = -1
     max_folder = None
@@ -171,7 +170,7 @@ def autotrain(*args, **kwargs):
     logger.info("Starting auto-training task")
     try:
         base_dir = os.path.join(settings.BASE_DIR, 'models')
-        model_dir = latest_model(base_dir)
+        model_dir = _get_latest_model(base_dir)
         db_data = DbShvisitorsDaily.objects.all()
         dataset = melt(cut(read_frame(db_data, index_col='DATE')))
         train(model_dir, dataset)
@@ -185,7 +184,7 @@ def autopredict(*args, **kwargs):
     logger.info("Starting auto-prediction task")
     try:
         base_dir = os.path.join(settings.BASE_DIR, 'models')
-        model_dir = latest_model(base_dir)
+        model_dir = _get_latest_model(base_dir)
         db_data = DbShvisitorsDaily.objects.all()
         dataset = melt(cut(read_frame(db_data, index_col='DATE')))
         pred = predict(model_dir, dataset, 'AutoPatchTST')

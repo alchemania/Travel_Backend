@@ -85,7 +85,7 @@ ROOT_URLCONF = "TravelServer.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'templates']
+        "DIRS": [BASE_DIR / 'templates/dist']
         ,
         "APP_DIRS": True,
         "OPTIONS": {
@@ -100,7 +100,7 @@ TEMPLATES = [
 ]
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'templates'),
+    os.path.join(BASE_DIR, 'templates/dist/static/'),
 ]
 
 WSGI_APPLICATION = "TravelServer.wsgi.application"
