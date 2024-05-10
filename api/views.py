@@ -1,13 +1,22 @@
 import datetime
 
+import socketio
 from django.db.models import Sum, Min, F, Avg, ExpressionWrapper
 from django.db.models.functions import ExtractYear, ExtractMonth
 from django.http import JsonResponse
 from django.views.decorators.cache import cache_page
-from django.views.decorators.vary import vary_on_headers
 
 from api.models import *
 from tasks import *
+
+
+
+def wsSucessResponse(msg):
+    return {'success': msg}
+
+
+def wsFailureResponse(msg):
+    return {'failure': msg}
 
 
 @cache_page(timeout=60 * 5)  # l3

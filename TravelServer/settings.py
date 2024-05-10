@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "api",
+    "socketio",
     "corsheaders",
 ]
 
@@ -99,7 +100,7 @@ TEMPLATES = [
 ]
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'templates/dist/static'),
+    os.path.join(BASE_DIR, 'templates'),
 ]
 
 WSGI_APPLICATION = "TravelServer.wsgi.application"
