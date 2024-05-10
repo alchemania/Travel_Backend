@@ -5,14 +5,16 @@ COPY --chown=root:root . /root/server
 WORKDIR /root
 
 RUN apt update && \
-    apt install -y python3-dev libmysqlclient-dev build-essential pkg-config && \
+    apt install -y python3-dev libmysqlclient-dev build-essential pkg-config supervisor && \
     apt clean && \
-    pip install -r ./server/requirements.txt  --no-cache-dir
-#    python manage.py makemigrations && \
-#    python manage.py migrate && \
+    pip install -r ./server/requirements.txt --no-cache-dir
 
+# Set an environment variable to indicate that this is running in a Docker container
+ENV DEPLOYED=1
 
-CMD ["python", "/root/server/manage.py", "runserver", "0.0.0.0:8000"]
+# Supervisord configuration
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 EXPOSE 8000
 
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

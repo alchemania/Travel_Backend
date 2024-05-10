@@ -16,7 +16,8 @@ from django.apps import apps
 from api.models import *
 from tasks import *
 
-ws = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
+# ws = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
+ws = socketio.AsyncServer(cors_allowed_origins='*', async_mode='asgi')
 
 
 def wsSucessResponse(content):

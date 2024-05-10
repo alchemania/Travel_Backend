@@ -45,7 +45,7 @@ else:
     ca = {}
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -76,9 +76,8 @@ MIDDLEWARE = [
     "django.middleware.cache.CacheMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.common.CommonMiddleware"
+    "django.middleware.common.CommonMiddleware",
 ]
-
 
 ROOT_URLCONF = "TravelServer.urls"
 
@@ -233,15 +232,28 @@ LOGGING = {
     },
 }
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',  # Redis服务器地址和数据库
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'TIMEOUT': 1000  # 缓存超时时间（秒），根据需要调整
+if os.getenv('DEPLOYED') == '1':
+    # docker run -itd --name redis -p 6379:6379 redis:latest
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': 'redis://redis:6379/1',  # Redis服务器地址和数据库
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'TIMEOUT': 1000  # 缓存超时时间（秒），根据需要调整
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': 'redis://127.0.0.1:6379/1',  # Redis服务器地址和数据库
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'TIMEOUT': 1000  # 缓存超时时间（秒），根据需要调整
+        }
+    }
 
 DJANGO_REDIS_LOGGER = LOGGING

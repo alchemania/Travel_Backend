@@ -69,9 +69,14 @@ The project, developed for the 16th China College Students’ Computer Design Co
 ### Additional Information
 
 - **Celery Commands**: (Windows specific; not needed for Linux)
-  - `celery worker -A tasks --loglevel=info -P eventlet`
   - `celery -A tasks worker --loglevel=info -P eventlet`
 - **Redis**: `./redis-server.exe redis.windows.conf`
+- **Docker**：
+```shell
+docker network create deploy
+docker run -itd --name redis --network deploy -p 6379:6379 redis:latest
+docker run -itd --name tsvr --network deploy -p 8000:8000 tsvr:1.0
+```
 
 ## Required Packages
 

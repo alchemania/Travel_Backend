@@ -1,7 +1,6 @@
 # python packages
 import os
 import re
-
 import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TravelServer.settings')
