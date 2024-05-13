@@ -4,4 +4,4 @@ venv
 */migrations/*
 *pem
 *log
-/pipeline/lightning_logs/
+/utils/lightning_logs/
