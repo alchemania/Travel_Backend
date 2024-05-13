@@ -6,7 +6,6 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TravelServer.settings')
 django.setup()
 
-import numpy as np
 from django_pandas.io import read_frame
 
 from celery import Celery, chain, group
@@ -22,9 +21,9 @@ from django.db.models import Max
 from TravelServer import settings
 
 # self-defined module import
-from pipeline.spider import HKVisitorsSpider, SHHotelSpider
+from pipeline.spider import HKVisitorsSpider, ShHotelSpider
 from pipeline.model import train, predict
-from pipeline.dataprocess import melt, pivot, cut
+from pipeline.dataprocess import melt, cut
 
 broker = 'redis://127.0.0.1:6379'
 backend = 'redis://127.0.0.1:6379/0'
@@ -59,10 +58,10 @@ app.conf.beat_schedule = {
 def auto_hotel_spider(*args, **kwargs):
     logger.info("Starting the hotel spider task")
     try:
-        tasks = DbSpider.objects.filter(unique_id__contains=SHHotelSpider.identifier).all()
+        tasks = DbSpider.objects.filter(unique_id__contains=ShHotelSpider.identifier).all()
         tasks = read_frame(tasks).to_dict(orient='list')
         tasks = dict(zip(tasks['unique_id'], tasks['url']))
-        spider = SHHotelSpider('update', tasks=tasks)
+        spider = ShHotelSpider('update', tasks=tasks)
         spider.run()
         logger.info("Hotel spider task fetching completed successfully")
 
@@ -75,11 +74,11 @@ def auto_hotel_spider(*args, **kwargs):
             data = spider.data()
             instances = [
                 DbShHotel(
-                    date=row[SHHotelSpider.pd_columns[0]],
-                    avg_rent_rate=row[SHHotelSpider.pd_columns[1]],
-                    avg_rent_rate_5=row[SHHotelSpider.pd_columns[2]],
-                    avg_price=row[SHHotelSpider.pd_columns[3]],
-                    avg_price_5=row[SHHotelSpider.pd_columns[4]],
+                    date=row[ShHotelSpider.pd_columns[0]],
+                    avg_rent_rate=row[ShHotelSpider.pd_columns[1]],
+                    avg_rent_rate_5=row[ShHotelSpider.pd_columns[2]],
+                    avg_price=row[ShHotelSpider.pd_columns[3]],
+                    avg_price_5=row[ShHotelSpider.pd_columns[4]],
                 )
                 for index, row in data.iterrows()
             ]
@@ -214,7 +213,7 @@ def auto_model_renewal(*args, **kwargs):
 def pipeline(*args, **kwargs):
     """
     To start the pipeline task
-    1. celery -A tasks worker --loglevel=info -P gevent 启动worker
+    1. celery -A tasks worker --loglevel=info -P eventlet 启动worker
     2. celery -A tasks beats --loglevel=info 启动定时任务
     3. celery -A tasks flower 启动flower面板
     """
