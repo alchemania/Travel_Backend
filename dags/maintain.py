@@ -16,6 +16,10 @@ default_args = {
     'catchup': False
 }
 
+cfg = {
+    "donot_pickle": "True"
+}
+
 dag = DAG(
     'full_maintain',
     default_args=default_args,
@@ -28,26 +32,32 @@ crawl_sh_hotel = PythonOperator(
     task_id='crawl_sh_hotel',
     python_callable=pipeline.crawl_sh_hotel,
     dag=dag,
-    provide_context=True
+    provide_context=True,
+    execution_timeout=timedelta(minutes=20),
+    executor_config=cfg
 )
 
 crawl_sh_visitors = PythonOperator(
     task_id='crawl_sh_visitors',
     python_callable=pipeline.crawl_sh_visitors,
     dag=dag,
+    execution_timeout=timedelta(minutes=20),
+    executor_config=cfg
+
 )
 
 crawl_hk_visitors = PythonOperator(
     task_id='crawl_hk_visitors',
     python_callable=pipeline.crawl_hk_visitors,
     dag=dag,
+    execution_timeout=timedelta(minutes=20)
 )
 
 
 def check_crawl_sh_visitors(**kwargs):
     ti = kwargs['ti']
     result = ti.xcom_pull(task_ids='crawl_sh_visitors')
-    if result == 0:
+    if result == 1:
         return 'continue_execution'
     else:
         return 'end_execution'
@@ -74,30 +84,35 @@ impute_hk_visitors = PythonOperator(
     task_id='impute_hk_visitors',
     python_callable=pipeline.impute_hk_visitors,
     dag=dag,
+    execution_timeout=timedelta(minutes=20)
 )
 
 interpolate_sh_visitors = PythonOperator(
     task_id='interpolate_sh_visitors',
     python_callable=pipeline.interpolate_sh_visitors,
     dag=dag,
+    execution_timeout=timedelta(minutes=20)
 )
 
 train_sh_visitors_model = PythonOperator(
     task_id='train_sh_visitors',
     python_callable=pipeline.train_sh_visitors,
     dag=dag,
+    execution_timeout=timedelta(minutes=20)
 )
 
 predict_sh_visitors_model = PythonOperator(
     task_id='predict_sh_visitors',
     python_callable=pipeline.predict_sh_visitors,
     dag=dag,
+    execution_timeout=timedelta(minutes=20)
 )
 
 train_predict_sh_hotels = PythonOperator(
     task_id='train_predict_sh_hotel',
     python_callable=pipeline.train_predict_sh_hotels,
     dag=dag,
+    execution_timeout=timedelta(minutes=20)
 )
 
 # 设置依赖关系

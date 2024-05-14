@@ -51,6 +51,17 @@ class DbShHotel(models.Model):
         db_table = 'sh_hotel'
 
 
+class DbShHotelPred(models.Model):
+    DATE = models.DateTimeField(primary_key=True, db_column='日期')
+    avg_rent_rate = models.FloatField(db_column='平均出租率')
+    avg_price = models.IntegerField(db_column='平均房价')
+    avg_rent_rate_5 = models.FloatField(db_column='五星级平均出租率')
+    avg_price_5 = models.IntegerField(db_column='五星级平均房价')
+
+    class Meta:
+        db_table = 'sh_hotel_pred'
+
+
 class DbHkVisitorsImputed(models.Model):
     date = models.DateTimeField(primary_key=True)
     HK_airport_entry = models.FloatField(null=True, blank=True, db_column='HK_airport_entry')

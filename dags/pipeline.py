@@ -13,6 +13,7 @@ from typing import List, Dict, Optional
 
 import requests
 from bs4 import BeautifulSoup
+from dateutil.relativedelta import relativedelta
 from django.utils.dateparse import parse_datetime
 from lxml.html.diff import parse_html
 from pandas import DataFrame
@@ -129,12 +130,11 @@ class ShStatsSpider:
         """
         current_urls = self.extract_urls(current_page_html)
         existing_urls = set(self.tasks.values())
-        new_urls = [url for url in current_urls if url not in existing_urls]
-
-        for url in new_urls:
-            task_id = self.identifier + '_' + str(uuid.uuid5(uuid.NAMESPACE_DNS, url)).replace('-', '')[:8]
-            self.tasks[task_id] = url
-
+        new_urls = list(set(current_urls).difference(existing_urls))
+        self.tasks = {
+            self.identifier + '_' + str(uuid.uuid5(uuid.NAMESPACE_DNS, url)).replace('-', '')[:8]: url
+            for url in new_urls
+        }
         logging.info(f"Added {len(new_urls)} new tasks.")
         self.spider_status = 'running'
 
@@ -226,7 +226,7 @@ class ShStatsSpider:
 
 class ShVisitorsSpider(ShStatsSpider):
     # rewrite
-    identifier = 'visitor_spider'
+    identifier = 'visitors_spider'
     pd_columns = ["date", "foreign_entry", "hkmo_entry", "tw_entry"]
     locs = ["外国人", "港澳同胞", "台湾同胞"]
     prefix = 'https://tjj.sh.gov.cn'
@@ -237,8 +237,9 @@ class ShVisitorsSpider(ShStatsSpider):
         super().__init__(spider_status, tasks)
 
 
+# test passed
 class ShHotelSpider(ShStatsSpider):
-    identifier = 'sh_hotel_spd'
+    identifier = 'hotel_spider'
     pd_columns = ["日期", "平均出租率", "五星级平均出租率", "平均房价", "五星级平均房价", "平均房价增长",
                   "五星级房价增长"]
     locs = ["星级饭店客房平均出租率", "五星级", "星级饭店平均房价", "五星级", "星级饭店平均房价增长", "五星级"]
@@ -262,6 +263,7 @@ class HKVisitorsSpider:
             'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7'
         }
         response = requests.get(url, headers=headers)
+        response.encoding = response.apparent_encoding
         csv_data = StringIO(response.text)
         return pd.read_csv(csv_data)
 
@@ -306,114 +308,105 @@ class HKVisitorsSpider:
         return self.data
 
 
+# test passed
 def crawl_sh_hotel(*args, **kwargs):
     logger.info("Starting the hotel spider task")
-    try:
-        tasks = DbSpider.objects.filter(unique_id__contains=ShHotelSpider.identifier).all()
-        tasks = read_frame(tasks).to_dict(orient='list')
-        tasks = dict(zip(tasks['unique_id'], tasks['url']))
-        spider = ShHotelSpider('update', tasks=tasks)
-        spider.run()
-        logger.info("Hotel spider task fetching completed successfully")
+    tasks = DbSpider.objects.filter(unique_id__contains=ShHotelSpider.identifier).all()
+    tasks = read_frame(tasks).to_dict(orient='list')
+    tasks = dict(zip(tasks['unique_id'], tasks['url']))
+    spider = ShHotelSpider('update', tasks=tasks)
+    spider.run()
+    logger.info("Hotel spider task fetching completed successfully")
 
-        if spider.tasks:
-            logger.info("Hotel spider new data fetched")
-            objs = [DbSpider(unique_id=uid, url=url) for uid, url in spider.tasks]
-            DbSpider.objects.bulk_create(objs, ignore_conflicts=True)
-            logger.info("New spider tasks added to database")
+    if spider.tasks:
+        logger.info("Hotel spider new data fetched")
+        objs = [DbSpider(unique_id=uid, url=url) for uid, url in spider.tasks.items()]
+        DbSpider.objects.bulk_create(objs, ignore_conflicts=True)
+        logger.info("New spider tasks added to database")
 
-            data = spider.data_frame()
-            instances = [
-                DbShHotel(
-                    date=row[ShHotelSpider.pd_columns[0]],
-                    avg_rent_rate=row[ShHotelSpider.pd_columns[1]],
-                    avg_rent_rate_5=row[ShHotelSpider.pd_columns[2]],
-                    avg_price=row[ShHotelSpider.pd_columns[3]],
-                    avg_price_5=row[ShHotelSpider.pd_columns[4]],
-                )
-                for index, row in data.iterrows()
-            ]
-            DbShHotel.objects.bulk_create(instances, ignore_conflicts=True)
-            logger.info("Hotel data inserted into database")
-            return 0
-        else:
-            logger.info("Hotel spider task no new data fetched")
-            return 1
-    except Exception as e:
-        logger.error(f"An error occurred in the hotel spider task: {str(e)}")
-        return -1
+        data = spider.data_frame()
+        instances = [
+            DbShHotel(
+                DATE=row[ShHotelSpider.pd_columns[0]],
+                avg_rent_rate=row[ShHotelSpider.pd_columns[1]],
+                avg_rent_rate_5=row[ShHotelSpider.pd_columns[2]],
+                avg_price=row[ShHotelSpider.pd_columns[3]],
+                avg_price_5=row[ShHotelSpider.pd_columns[4]],
+            )
+            for index, row in data.iterrows()
+        ]
+        DbShHotel.objects.bulk_create(instances, ignore_conflicts=True)
+        logger.info("Hotel data inserted into database")
+        return 1
+    else:
+        logger.info("Hotel spider task no new data fetched")
+        return 0
 
 
 def crawl_sh_visitors(*args, **kwargs):
-    logger.info("Starting the hotel spider task")
-    try:
-        tasks = DbSpider.objects.filter(unique_id__contains=ShVisitorsSpider.identifier).all()
-        tasks = read_frame(tasks).to_dict(orient='list')
-        tasks = dict(zip(tasks['unique_id'], tasks['url']))
-        spider = ShHotelSpider('update', tasks=tasks)
-        spider.run()
-        logger.info("sh visitors spider task fetching completed successfully")
+    logger.info("Starting the sh visitor spider task")
+    tasks = DbSpider.objects.filter(unique_id__contains=ShVisitorsSpider.identifier).all()
+    tasks = read_frame(tasks).to_dict(orient='list')
+    tasks = dict(zip(tasks['unique_id'], tasks['url']))
+    spider = ShVisitorsSpider('update', tasks=tasks)
+    spider.run()
+    logger.info("sh visitors spider task fetching completed successfully")
 
-        if spider.tasks:
-            logger.info("sh visitors spider new data fetched")
-            objs = [DbSpider(unique_id=uid, url=url) for uid, url in spider.tasks.items()]
-            DbSpider.objects.bulk_create(objs, ignore_conflicts=True)
-            logger.info("New spider tasks added to database")
+    if spider.tasks:
+        logger.info("sh visitors spider new data fetched")
+        objs = [DbSpider(unique_id=uid, url=url) for uid, url in spider.tasks.items()]
+        DbSpider.objects.bulk_create(objs, ignore_conflicts=True)
+        logger.info("New spider tasks added to database")
 
-            data = spider.data_frame()
-            instances = [
-                DbShvisitorsMonthly(
-                    DATE=row[ShVisitorsSpider.pd_columns[0]],
-                    FOREIGN=row[ShVisitorsSpider.pd_columns[1]],
-                    HM=row[ShVisitorsSpider.pd_columns[2]],
-                    TW=row[ShVisitorsSpider.pd_columns[3]],
-                )
-                for index, row in data.iterrows()
-            ]
-            DbShvisitorsMonthly.objects.bulk_create(instances, ignore_conflicts=True)
-            logger.info("SH Visitor data inserted into database")
-            return 0
-        else:
-            logger.info("SH Visitor spider task no new data fetched")
-            return 0
-    except Exception as e:
-        logger.error(f"An error occurred in the hotel spider task: {str(e)}")
-        return -1
+        data = spider.data_frame()
+        instances = [
+            DbShvisitorsMonthly(
+                DATE=row[ShVisitorsSpider.pd_columns[0]],
+                FOREIGN=int(row[ShVisitorsSpider.pd_columns[1]]) * 10000,
+                HM=int(row[ShVisitorsSpider.pd_columns[2]]) * 10000,
+                TW=int(row[ShVisitorsSpider.pd_columns[3]]) * 10000,
+            )
+            for index, row in data.iterrows()
+        ]
+        DbShvisitorsMonthly.objects.bulk_create(instances, ignore_conflicts=True)
+        logger.info("SH Visitor data inserted into database")
+        return 1
+    else:
+        logger.info("SH Visitor spider task no new data fetched")
+        return 0
 
 
+# test passed
 def crawl_hk_visitors(*args, **kwargs):
     logger.info("Starting the HK visitors spider task")
-    try:
-        spider = HKVisitorsSpider()
-        spider.run()
-        logger.info("HK visitors spider task fetching completed successfully")
-        max_date_db = DbHkVisitors.objects.aggregate(max_date=Max('date'))['max_date'].date()
-        max_date_spd = spider.data['date'].max()
-        if max_date_spd > max_date_db or max_date_db is None:
-            logger.info("HK visitors spider new data fetched")
-            data = spider.data[spider.data['date'] > max_date_db]
-            instances = [
-                DbHkVisitors(
-                    date=row['date'],
-                    HK_airport_entry=row['HK_airport_entry'],
-                    CN_airport_entry=row['CN_airport_entry'],
-                    global_airport_entry=row['global_airport_entry'],
-                    airport_entry=row['airport_entry'],
-                    HK_airport_departure=row['HK_airport_departure'],
-                    CN_airport_departure=row['CN_airport_departure'],
-                    global_airport_departure=row['global_airport_departure'],
-                    airport_departure=row['airport_departure']
-                )
-                for index, row in data.iterrows()
-            ]
-            DbHkVisitors.objects.bulk_create(instances, ignore_conflicts=True)
-            logger.info("HK visitors data updated in database")
-            return True
-        else:
-            logger.info("HK visitors spider no new data fetched")
-            return False
-    except Exception as e:
-        logger.error(f"An error occurred in the HK visitors spider task: {str(e)}")
+    spider = HKVisitorsSpider()
+    spider.run()
+    logger.info("HK visitors spider task fetching completed successfully")
+    max_date_db = DbHkVisitors.objects.aggregate(max_date=Max('date'))['max_date'].date()
+    max_date_spd = spider.data['date'].max()
+    if max_date_spd > max_date_db or max_date_db is None:
+        logger.info("HK visitors spider new data fetched")
+        data = spider.data[spider.data['date'] > max_date_db]
+        instances = [
+            DbHkVisitors(
+                date=row['date'],
+                HK_airport_entry=row['HK_airport_entry'],
+                CN_airport_entry=row['CN_airport_entry'],
+                global_airport_entry=row['global_airport_entry'],
+                airport_entry=row['airport_entry'],
+                HK_airport_departure=row['HK_airport_departure'],
+                CN_airport_departure=row['CN_airport_departure'],
+                global_airport_departure=row['global_airport_departure'],
+                airport_departure=row['airport_departure']
+            )
+            for index, row in data.iterrows()
+        ]
+        DbHkVisitors.objects.bulk_create(instances, ignore_conflicts=True)
+        logger.info("HK visitors data updated in database")
+        return 1
+    else:
+        logger.info("HK visitors spider no data fetched")
+        return 0
 
 
 # test passed
@@ -449,7 +442,7 @@ def impute_hk_visitors(*args, **kwargs):
         d_v=64,
         dropout=0.1,
         attn_dropout=0,
-        epochs=300,
+        epochs=100,
         optimizer=Adam(lr=1e-3),
         device=torch.device(
             "cuda:0" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"),
@@ -478,7 +471,7 @@ def impute_hk_visitors(*args, **kwargs):
     # 操作数据库
     instances = [
         DbHkVisitorsImputed(
-            date=row['date'],
+            date=index,
             HK_airport_entry=row['HK_airport_entry'],
             CN_airport_entry=row['CN_airport_entry'],
             global_airport_entry=row['global_airport_entry'],
@@ -490,7 +483,10 @@ def impute_hk_visitors(*args, **kwargs):
         )
         for index, row in impute.iterrows()
     ]
-    DbHkVisitorsImputed.objects.bulk_create(instances, update_conflicts=True)
+    DbHkVisitorsImputed.objects.bulk_create(instances, update_conflicts=True, update_fields=[
+        'HK_airport_entry', 'CN_airport_entry', 'global_airport_entry', 'airport_entry',
+        'HK_airport_departure', 'CN_airport_departure', 'global_airport_departure', 'airport_departure'
+    ])
     logger.info("HK visitors data updated in database")
 
 
@@ -620,19 +616,16 @@ def _get_latest_model(directory, *args, **kwargs):
 
 def train_sh_visitors(*args, **kwargs):
     logger.info("Starting auto-training task")
-    try:
-        base_dir = os.path.join(settings.BASE_DIR, 'models')
-        model_dir = _get_latest_model(base_dir)
-        df = DbShvisitorsDaily.objects.all()
-        df = read_frame(df, index_col='DATE')
-        df = cut(df)
-        df = melt(df)
-        nf = NeuralForecast.load(model_dir, verbose=False)
-        nf.fit(df=df)
-        nf.save(str(Path(model_dir).parent.joinpath(f'modelgroup_{datetime.now().strftime("%Y%m%d%H%M%S")}')))
-        logger.info("Model training completed successfully")
-    except Exception as e:
-        logger.error(f"An error occurred in the auto-training task: {str(e)}")
+    base_dir = os.path.join(settings.BASE_DIR, 'models')
+    model_dir = _get_latest_model(base_dir)
+    df = DbShvisitorsDaily.objects.all()
+    df = read_frame(df, index_col='DATE')
+    df = cut(df)
+    df = melt(df)
+    nf = NeuralForecast.load(model_dir, verbose=False)
+    nf.fit(df=df)
+    nf.save(str(Path(model_dir).parent.joinpath(f'modelgroup_{datetime.now().strftime("%Y%m%d%H%M%S")}')))
+    logger.info("Model training completed successfully")
 
 
 def predict_sh_visitors(*args, **kwargs):
@@ -653,7 +646,7 @@ def predict_sh_visitors(*args, **kwargs):
             df_pred = pd.concat([df_pred, step], axis=0)
         instances = [
             DbShvisitorsDailyPredicted(
-                DATE=row.index,
+                DATE=index,
                 FOREIGN=row['global_entry'],
                 HM=row['hkmo_entry'],
                 TW=row['tw_entry']
@@ -667,14 +660,72 @@ def predict_sh_visitors(*args, **kwargs):
 
 
 def train_predict_sh_hotels(*args, **kwargs):
-    df = DbShHotel.objects.all()
-    df = read_frame(df, index_col='DATE')
+    df_ori = DbShHotel.objects.all()
+    df_ori = read_frame(df_ori, index_col='DATE', datetime_index=True, coerce_float=True)
     scalar = StandardScaler()
-    df_new = pd.DataFrame(scalar.fit_transform(df), index=df.index, columns=df.columns)
-    df_new = df_new.reindex(pd.date_range(start=df.index.min(), end=pd.to_datetime('2025-04-01'), freq='MS'))
-    num_samples = df_new.shape[0]
-    num_features = df_new.shape[1]
+    df = pd.DataFrame(scalar.fit_transform(df_ori), index=df_ori.index, columns=df_ori.columns)
+    df = df.reindex(pd.date_range(start=df.index.min(), end=df.index.max() + relativedelta(years=1), freq='MS'))
+    df_ori = df_ori.reindex(
+        pd.date_range(start=df_ori.index.min(), end=df_ori.index.max() + relativedelta(years=1), freq='MS'))
+    num_samples = df.shape[0]
+    num_features = df.shape[1]
+    ds = {"X": df.values.reshape(1, num_samples, -1)}  # X for model input
+    transformer = Transformer(
+        n_steps=num_samples,
+        n_features=num_features,
+        n_layers=4,
+        d_model=128,
+        d_ffn=128,
+        n_heads=4,
+        d_k=32,
+        d_v=64,
+        dropout=0.05,
+        attn_dropout=0,
+        epochs=400,
+        optimizer=Adam(lr=1e-3),
+        device=torch.device(
+            'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
+    )
 
+    transformer.fit(ds)
 
-if __name__ == '__main__':
-    interpolate_sh_visitors()
+    # impute and convert back
+    impute = pd.DataFrame(
+        scalar.inverse_transform(transformer.impute(ds).squeeze()),
+        columns=df.columns,
+        index=df.index)
+    impute = pd.DataFrame({
+        col: np.where(
+            (np.isnan(df.values) ^ np.isnan(impute.values)).reshape(num_samples, num_features)[:, 0],
+            impute[col],
+            df_ori[col]
+        ) for col
+        in
+        df_ori.columns
+    }, index=df.index)
+
+    # 操作数据库
+
+    instances = [
+        DbShHotelPred(
+            DATE=index,
+            avg_rent_rate=row['avg_rent_rate'],
+            avg_rent_rate_5=row['avg_rent_rate_5'],
+            avg_price=row['avg_price'],
+            avg_price_5=row['avg_price_5'],
+        )
+        for index, row in impute.iterrows()
+    ]
+    DbShHotelPred.objects.bulk_create(instances, update_conflicts=True, update_fields=[
+        'avg_rent_rate', 'avg_rent_rate_5', 'avg_price', 'avg_price_5'
+    ])
+    logger.info("SH hotel data updated in database")
+
+# if __name__ == '__main__':
+#     pass
+# interpolate_sh_visitors()
+# crawl_sh_visitors()
+# crawl_sh_hotel()
+# crawl_hk_visitors()
+# impute_hk_visitors()
+# train_predict_sh_hotels()

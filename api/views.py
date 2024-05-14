@@ -1,11 +1,12 @@
 import datetime
-from django.db.models import Sum, Min, F, Avg, ExpressionWrapper
+from django.db.models import Sum, F, Avg
 from django.db.models.functions import ExtractYear, ExtractMonth
 from django.http import JsonResponse
 from django.views.decorators.cache import cache_page
 
 from api.models import *
-from tasks import *
+import numpy as np
+from django_pandas.io import read_frame
 
 
 @cache_page(timeout=60 * 5)  # l3
@@ -138,7 +139,7 @@ def api_sh_hotel_rawdata(request, freq, ys, ms, ds, ye, me, de):
 # 其实这个是预测api，但是预测的数据已经放入数据库，所以直接查询
 def api_sh_hotel_yoy(request, freq, year, month, day):
     today = datetime.datetime.today()
-    rate = DbShHotel.objects.filter(DATE__year=today.year, DATE__month=today.month).first().avg_rent_rate
+    rate = DbShHotelPred.objects.filter(DATE__year=year, DATE__month=month).first().avg_rent_rate
     return JsonResponse({'per': rate})
 
 
@@ -258,21 +259,3 @@ def api_sh_datastats(request):
         'hot_year': hot_year,
         'hot_month': hot_month
     })
-
-
-# @ no cache
-def api_maintain_trigger(request, module):
-    activity = {
-        "parallel_spiders": auto_parallel_spiders.delay(),
-        "hkvisitors": auto_hkvisitors_spider.delay(),
-        "hotel": auto_hotel_spider.delay(),
-        "shvisitors": auto_shvisitors_spider.delay(),
-        "train": autopredict.delay(),
-        "predict": autopredict.delay(),
-        "model_renewal": auto_model_renewal.delay(),
-    }
-
-    if module in activity:
-        return JsonResponse({'status': 'success', 'msg': f'{module} triggered successfully'})
-    else:
-        return JsonResponse({'status': 'failed', 'msg': f'{module} triggered failed'})
