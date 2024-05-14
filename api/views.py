@@ -1,4 +1,6 @@
 import datetime
+
+import numpy as np
 from django.db.models import Sum, Min, F, Avg, ExpressionWrapper
 from django.db.models.functions import ExtractYear, ExtractMonth
 from django.http import JsonResponse
@@ -138,7 +140,7 @@ def api_sh_hotel_rawdata(request, freq, ys, ms, ds, ye, me, de):
 # 其实这个是预测api，但是预测的数据已经放入数据库，所以直接查询
 def api_sh_hotel_yoy(request, freq, year, month, day):
     today = datetime.datetime.today()
-    rate = DbShHotel.objects.filter(DATE__year=today.year, DATE__month=today.month).first().avg_rent_rate
+    rate = DbShHotelPred.objects.filter(DATE__year=today.year, DATE__month=today.month).first().avg_rent_rate
     return JsonResponse({'per': rate})
 
 
