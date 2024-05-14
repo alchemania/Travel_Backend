@@ -80,9 +80,15 @@ docker run -itd --name tsvr --network deploy -p 8000:8000 tsvr:1.0
 - **Apache airflow**
 ```shell
 airflow db migrate
+airflow users create \                                         
+    --username admin \
+    --firstname John \
+    --lastname Doe \
+    --role Admin \
+    --email john.doe@example.com
+
 airflow webserver --port 8080
 airflow scheduler
-
 ```
 
 ## Required Packages
