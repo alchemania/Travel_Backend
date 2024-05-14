@@ -25,6 +25,8 @@ urlpatterns = [
          api.views.api_sh_visitors_rawdata, name="api_sh_visitors_all"),
     path('api/data/sh/visitors/sum/<str:freq>/<int:year>/<int:month>/<int:day>', api.views.api_sh_visitors_sum,
          name='api-sh-visitors-sum'),
+    path('api/data/sh/visitors/sumdiv/<int:year>/<int:month>', api.views.api_sh_visitors_sumdiv,
+         name='api-sh-visitors-sumdiv'),
     path('api/data/sh/visitors/yoy/<str:freq>/<int:year>/<int:month>/<int:day>', api.views.api_sh_visitors_yoy,
          name='api-sh-visitors-yoy'),
 

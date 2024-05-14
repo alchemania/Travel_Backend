@@ -119,6 +119,44 @@ def api_sh_visitors_yoy(request, freq, year, month, day):
     return JsonResponse({'per': round(growth, 2)})
 
 
+@cache_page(timeout=60 * 5)  # l1
+def api_sh_visitors_sumdiv(request, year, month):
+    # 计算本月的第一天和最后一天
+    start_of_month = datetime.datetime(year, month, 1)
+    # 获取下个月的第一天，然后减去一秒得到本月的最后一秒
+    if month == 12:
+        end_of_month = datetime.datetime(year + 1, 1, 1) - datetime.timedelta(seconds=1)
+    else:
+        end_of_month = datetime.datetime(year, month + 1, 1) - datetime.timedelta(seconds=1)
+
+    # 筛选本月的数据
+    monthly_data = DbShvisitorsDailyPredicted.objects.filter(DATE__range=(start_of_month, end_of_month))
+
+    # 对每一列进行求和
+    totals = monthly_data.aggregate(
+        total_foreign=Sum('FOREIGN'),
+        total_hm=Sum('HM'),
+        total_tw=Sum('TW')
+    )
+
+    result = [
+        {
+            "name": '外国人',
+            "value": totals['total_foreign'],
+        },
+        {
+            "name": '港澳入境',
+            "value": totals['total_hm'],
+        },
+        {
+            "name": '台湾省入境',
+            "value": totals['total_tw'],
+        }
+    ]
+
+    return JsonResponse(result, safe=False)
+
+
 @cache_page(timeout=60 * 5)  # l3
 def api_sh_hotel_rawdata(request, freq, ys, ms, ds, ye, me, de):
     start_date = datetime.date(ys, ms, ds)
@@ -126,7 +164,7 @@ def api_sh_hotel_rawdata(request, freq, ys, ms, ds, ye, me, de):
     if freq == 'm':
         data = DbShHotel.objects.filter(
             DATE__gte=start_date, DATE__lte=end_date
-        )
+        ).order_by('DATE')
     elif freq == 'd':
         return JsonResponse({'error': 'No d frequency in this table'})
     else:
@@ -271,7 +309,6 @@ def api_maintain_trigger(request, module):
         "shvisitors": auto_shvisitors_spider.delay(),
         "train": autopredict.delay(),
         "predict": autopredict.delay(),
-        "model_renewal": auto_model_renewal.delay(),
     }
 
     if module in activity:
