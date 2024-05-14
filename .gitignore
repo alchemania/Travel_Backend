@@ -5,3 +5,8 @@ venv
 *pem
 *log
 /utils/lightning_logs/
+/webserver_config.py
+/server.log
+/airflow.cfg
+/logs/
+/airflow-webserver.pid
