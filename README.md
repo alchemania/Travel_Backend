@@ -77,6 +77,13 @@ docker network create deploy
 docker run -itd --name redis --network deploy -p 6379:6379 redis:latest
 docker run -itd --name tsvr --network deploy -p 8000:8000 tsvr:1.0
 ```
+- **Apache airflow**
+```shell
+airflow db migrate
+airflow webserver --port 8080
+airflow scheduler
+
+```
 
 ## Required Packages
 
