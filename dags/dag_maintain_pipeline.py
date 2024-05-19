@@ -1,4 +1,3 @@
-import sys
 import os
 import sys
 
@@ -21,7 +20,7 @@ cfg = {
 }
 
 dag = DAG(
-    'full_maintain',
+    'maintain_pipeline',
     default_args=default_args,
     description='For Auto Maintain',
     schedule=timedelta(days=1)

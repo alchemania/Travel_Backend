@@ -15,10 +15,9 @@ default_args = {
 }
 
 dag = DAG(
-    'spider',
+    'data_pipeline',
     default_args=default_args,
     description='For Auto Maintain',
-    schedule=timedelta(days=1)
 )
 
 # 创建任务
@@ -42,5 +41,4 @@ crawl_hk_visitors = PythonOperator(
 
 # 设置依赖关系
 # 函数 1, 2, 3 可以并行
-crawl_hk_visitors
-# crawl_sh_visitors >> crawl_sh_hotel >> crawl_hk_visitors
+[crawl_sh_visitors, crawl_sh_hotel] >> crawl_hk_visitors

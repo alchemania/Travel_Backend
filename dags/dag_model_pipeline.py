@@ -1,4 +1,3 @@
-import sys
 import os
 import sys
 
@@ -16,22 +15,27 @@ default_args = {
 }
 
 dag = DAG(
-    'machine_learning',
+    'model_pipeline',
     default_args=default_args,
     description='For Auto Maintain',
-    schedule=timedelta(days=1)
 )
 
 train = PythonOperator(
-    task_id='train',
+    task_id='train_sh_visitors',
     python_callable=pipeline.train_sh_visitors,
     dag=dag,
 )
 
 predict = PythonOperator(
-    task_id='predict',
+    task_id='predict_sh_visitors',
     python_callable=pipeline.predict_sh_visitors,
     dag=dag,
 )
 
-train >> predict
+tp = PythonOperator(
+    task_id='train_predict_sh_hotels',
+    python_callable=pipeline.train_predict_sh_hotels,
+    dag=dag,
+)
+
+[train, tp] >> predict
