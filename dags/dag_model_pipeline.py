@@ -10,7 +10,7 @@ import pipeline
 
 default_args = {
     'owner': 'airflow',
-    'start_date': datetime.now() - timedelta(days=1),
+    'start_date': datetime.now(),
     'catchup': False,
     'schedule_interval': None
 }
