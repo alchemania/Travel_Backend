@@ -38,7 +38,5 @@ urlpatterns = [
     path("api/data/sh/stats", api.views.api_sh_datastats),
     path("api/data/sh/visitorsbycountry/stats", api.views.api_sh_visitors_by_country_statistics),
 
-    path("api/maintain/trigger/<str:module>", api.views.api_maintain_trigger),
-
     path('', TemplateView.as_view(template_name='index.html'))
 ]

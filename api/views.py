@@ -7,7 +7,6 @@ from django.http import JsonResponse
 from django.views.decorators.cache import cache_page
 
 from api.models import *
-from tasks import *
 
 
 @cache_page(timeout=60 * 5)  # l3
@@ -298,20 +297,3 @@ def api_sh_datastats(request):
         'hot_year': hot_year,
         'hot_month': hot_month
     })
-
-
-# @ no cache
-def api_maintain_trigger(request, module):
-    activity = {
-        "parallel_spiders": auto_parallel_spiders.delay(),
-        "hkvisitors": auto_hkvisitors_spider.delay(),
-        "hotel": auto_hotel_spider.delay(),
-        "shvisitors": auto_shvisitors_spider.delay(),
-        "train": autopredict.delay(),
-        "predict": autopredict.delay(),
-    }
-
-    if module in activity:
-        return JsonResponse({'status': 'success', 'msg': f'{module} triggered successfully'})
-    else:
-        return JsonResponse({'status': 'failed', 'msg': f'{module} triggered failed'})
