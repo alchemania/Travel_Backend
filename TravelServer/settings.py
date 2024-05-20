@@ -60,7 +60,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "api",
-    "socketio",
     "corsheaders",
 ]
 
@@ -84,8 +83,7 @@ ROOT_URLCONF = "TravelServer.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'templates/dist']
-        ,
+        "DIRS": [os.path.join(BASE_DIR, 'templates/dist')],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -99,7 +97,7 @@ TEMPLATES = [
 ]
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'templates/dist/static/'),
+    os.path.join(BASE_DIR, 'templates/dist/static'),
 ]
 
 WSGI_APPLICATION = "TravelServer.wsgi.application"
@@ -107,31 +105,21 @@ WSGI_APPLICATION = "TravelServer.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
-USE_TEST_DATABASE = False
-
-if USE_TEST_DATABASE:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'test.db'),
+DATABASES = {
+    'default': {
+        'ENGINE': 'django_tidb',
+        'NAME': 'django',
+        'USER': '4JHciBfpftZR67E.root',
+        'PASSWORD': 'S6bmjfTQFTA6QT6K',
+        'HOST': 'gateway01.us-west-2.prod.aws.tidbcloud.com',
+        'PORT': 4000,
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'ssl_mode': 'VERIFY_IDENTITY',
+            **ca
         }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django_tidb',
-            'NAME': 'django',
-            'USER': '4JHciBfpftZR67E.root',
-            'PASSWORD': 'S6bmjfTQFTA6QT6K',
-            'HOST': 'gateway01.us-west-2.prod.aws.tidbcloud.com',
-            'PORT': 4000,
-            'OPTIONS': {
-                'charset': 'utf8mb4',
-                'ssl_mode': 'VERIFY_IDENTITY',
-                **ca
-            }
-        },
-    }
+    },
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
