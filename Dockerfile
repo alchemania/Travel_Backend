@@ -15,7 +15,7 @@ FROM pytorch/pytorch:2.2.2-cuda12.1-cudnn8-runtime
 
 COPY --chown=root:root . /root/server
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY --from=builder /app/dist /root/server/templates
+COPY --from=builder /app/dist /root/server/templates/dist
 
 WORKDIR /root
 
