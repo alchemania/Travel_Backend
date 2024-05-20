@@ -11,7 +11,8 @@ import pipeline
 default_args = {
     'owner': 'airflow',
     'start_date': datetime.now() - timedelta(days=1),
-    'catchup': False
+    'catchup': False,
+    'schedule_interval': None
 }
 
 dag = DAG(
