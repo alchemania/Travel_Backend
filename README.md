@@ -77,7 +77,7 @@ docker build -t travel_server:1.0 .
 
 docker network create deploy
 docker run -itd --name redis --network deploy -p 6379:6379 redis:latest
-docker run -itd --name ts01 --network deploy -p 8000:8000 -p 8080:8080 travel_server:1.0
+docker run -itd --name ts01 --network deploy -p 8000:8000 -p 8080:8080 --gpus all travel_server:1.0
 ```
 - **Apache airflow**
 ```shell
