@@ -5,6 +5,7 @@ from django.db.models import Sum, Min, F, Avg, ExpressionWrapper
 from django.db.models.functions import ExtractYear, ExtractMonth
 from django.http import JsonResponse
 from django.views.decorators.cache import cache_page
+from django_pandas.io import read_frame
 
 from api.models import *
 

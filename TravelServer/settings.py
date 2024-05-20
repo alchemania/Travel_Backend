@@ -232,7 +232,7 @@ LOGGING = {
     },
 }
 
-if os.getenv('DEPLOYED') == '1':
+if os.getenv('DJANGO_DEPLOYED') == '1':
     # docker run -itd --name redis -p 6379:6379 redis:latest
     CACHES = {
         'default': {

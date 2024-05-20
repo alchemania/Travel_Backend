@@ -9,3 +9,4 @@ venv
 /server.log
 /logs/
 /airflow-webserver.pid
+/templates/dist/
